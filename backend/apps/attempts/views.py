@@ -19,6 +19,7 @@ from .serializers import (
     IntentoSerializer,
     ResponderSerializer,
     ResultadoDetalleSerializer,
+    ResultadoEstudianteDetalleSerializer,
     ResultadoSerializer,
 )
 
@@ -158,6 +159,18 @@ class MisResultadosViewSet(viewsets.ReadOnlyModelViewSet):
                 "intento__asignacion__estudiante", "intento__asignacion__examen"
             )
             .order_by("-id")
+        )
+
+    @extend_schema(responses={200: ResultadoEstudianteDetalleSerializer})
+    def retrieve(self, request, *args, **kwargs):
+        resultado = self.get_object()
+        maximos = {
+            i.pregunta_id: i.puntaje
+            for i in resultado.intento.asignacion.examen.items.all()
+        }
+        contexto = {"es_estudiante": True, "maximos": maximos}
+        return Response(
+            ResultadoEstudianteDetalleSerializer(resultado, context=contexto).data
         )
 
     def get_serializer_context(self):

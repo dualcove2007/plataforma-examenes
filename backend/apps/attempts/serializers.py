@@ -178,3 +178,48 @@ class ResultadoDetalleSerializer(ResultadoSerializer):
         return RespuestaDetalleSerializer(
             respuestas, many=True, context=self.context
         ).data
+        
+class RespuestaEstudianteSerializer(RespuestaDetalleSerializer):
+    opciones_correctas = serializers.SerializerMethodField()
+
+    class Meta(RespuestaDetalleSerializer.Meta):
+        fields = RespuestaDetalleSerializer.Meta.fields + ["opciones_correctas"]
+
+    def get_opciones_correctas(self, obj) -> list:
+        return [
+            {"id": o.id, "texto": o.texto}
+            for o in obj.pregunta.opciones.all()
+            if o.es_correcta
+        ]
+
+
+class ResultadoEstudianteDetalleSerializer(ResultadoSerializer):
+    detalle_disponible = serializers.SerializerMethodField()
+    respuestas = serializers.SerializerMethodField()
+
+    class Meta(ResultadoSerializer.Meta):
+        fields = ResultadoSerializer.Meta.fields + ["detalle_disponible", "respuestas"]
+        read_only_fields = fields
+
+    def _disponible(self, obj) -> bool:
+        examen = obj.intento.asignacion.examen
+        return obj.estado_revision == ResultadoExamen.Revision.REVISADO and examen.estado in (
+            "cerrado",
+            "archivado",
+        )
+
+    def get_detalle_disponible(self, obj) -> bool:
+        return self._disponible(obj)
+
+    @extend_schema_field(RespuestaEstudianteSerializer(many=True))
+    def get_respuestas(self, obj):
+        if not self._disponible(obj):
+            return None
+        respuestas = (
+            obj.intento.respuestas.select_related("pregunta")
+            .prefetch_related("seleccion__opcion", "pregunta__opciones")
+            .order_by("id")
+        )
+        return RespuestaEstudianteSerializer(
+            respuestas, many=True, context=self.context
+        ).data
