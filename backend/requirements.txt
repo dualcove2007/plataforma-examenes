@@ -1,0 +1,14 @@
+Django>=5.2,<5.3
+djangorestframework
+djangorestframework-simplejwt
+django-filter
+django-cors-headers
+drf-spectacular
+django-environ
+psycopg2-binary
+celery
+redis
+openpyxl
+reportlab
+pytest
+pytest-django
