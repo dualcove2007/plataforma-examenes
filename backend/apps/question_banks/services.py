@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 from rest_framework.exceptions import ValidationError
+from apps.audit.services import registrar
 
 from .serializers import PreguntaSerializer
 
@@ -132,4 +133,7 @@ def importar_preguntas(archivo, banco, request):
     with transaction.atomic():
         for serializer in validados:
             serializer.save()
+        registrar(
+            "importar", "BancoPreguntas", banco.pk, {"preguntas": len(validados)}
+        )
     return len(validados)

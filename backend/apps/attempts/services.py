@@ -6,6 +6,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.exams.models import AsignacionExamen, Examen
 from apps.question_banks.models import Pregunta
+from apps.audit.services import registrar, registrar_transicion
 
 from .models import Intento, RespuestaIntento, RespuestaOpcion, ResultadoExamen
 
@@ -94,7 +95,9 @@ def iniciar_intento(usuario, asignacion_id):
             fecha_limite=limite,
         )
         _actualizar_asignacion(asignacion)
+        registrar_transicion("Intento", intento.pk, "", E.EN_PROGRESO)
         return intento, True
+
 
 
 def responder(intento, pregunta, opciones, texto_respuesta):
@@ -146,9 +149,11 @@ def responder(intento, pregunta, opciones, texto_respuesta):
 
 @transaction.atomic
 def cerrar_intento(intento, estado):
+    anterior = intento.estado
     intento.estado = estado
     intento.fecha_fin = min(timezone.now(), intento.fecha_limite)
     intento.save(update_fields=["estado", "fecha_fin"])
+    registrar_transicion("Intento", intento.pk, anterior, estado)
     calificar(intento)
     _actualizar_asignacion(intento.asignacion)
 
@@ -227,7 +232,8 @@ def _recalcular(intento, docente=None):
     total = sum(r.puntaje_obtenido or 0 for r in respuestas)
     pendientes = sum(1 for r in respuestas if r.puntaje_obtenido is None)
 
-    resultado, _ = ResultadoExamen.objects.get_or_create(intento=intento)
+    resultado, creado = ResultadoExamen.objects.get_or_create(intento=intento)
+    anterior = "" if creado else resultado.estado_revision
     resultado.puntaje_total = round(total, 2)
     resultado.puntaje_maximo = round(maximo, 2)
     resultado.nota_final = round(total / maximo * NOTA_MAXIMA, 1) if maximo else 0.0
@@ -241,6 +247,10 @@ def _recalcular(intento, docente=None):
     else:
         resultado.estado_revision = R.PENDIENTE
     resultado.save()
+    if anterior != resultado.estado_revision:
+        registrar_transicion(
+            "Resultado", resultado.pk, anterior, resultado.estado_revision, docente
+        )
     return resultado
 
 
@@ -266,4 +276,12 @@ def calificar_abiertas(resultado, calificaciones, docente):
         r.puntaje_obtenido = c["puntaje"]
         r.es_correcta = c["puntaje"] >= maximo
         r.save(update_fields=["puntaje_obtenido", "es_correcta"])
+    registrar(
+        "calificar", "Resultado", resultado.pk,
+        {"calificaciones": [
+            {"respuesta": c["respuesta"], "puntaje": float(c["puntaje"])}
+            for c in calificaciones
+        ]},
+        docente,
+    )
     return _recalcular(intento, docente)

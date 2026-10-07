@@ -14,6 +14,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     "django.contrib.admin",
     "apps.attempts",
+    "apps.audit",
     "apps.exams",
     "apps.question_banks",
     "django.contrib.auth",
@@ -40,6 +41,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.audit.middleware.AuditoriaMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -93,7 +95,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.audit.authentication.AuditJWTAuthentication",
     ],
     "EXCEPTION_HANDLER": "apps.common.exceptions.manejador_excepciones",
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],

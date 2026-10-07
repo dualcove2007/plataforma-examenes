@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+from apps.audit.services import registrar, registrar_transicion
 
 from apps.authentication.models import Rol, Usuario
 
@@ -31,13 +32,14 @@ def _validar_publicable(examen):
 
 @transaction.atomic
 def cambiar_estado(examen, nuevo, usuario):
-    # `usuario` se usará para registrar el historial de estados (etapa de auditoría)
     if nuevo not in TRANSICIONES[examen.estado]:
         raise ValidationError(f"No se puede pasar de '{examen.estado}' a '{nuevo}'.")
     if nuevo == E.PUBLICADO:
         _validar_publicable(examen)
+    anterior = examen.estado
     examen.estado = nuevo
     examen.save(update_fields=["estado"])
+    registrar_transicion("Examen", examen.pk, anterior, nuevo, usuario)
     return examen
 
 
@@ -89,4 +91,6 @@ def asignar_estudiantes(examen, ids):
     AsignacionExamen.objects.bulk_create(
         [AsignacionExamen(examen=examen, estudiante_id=i) for i in nuevos]
     )
+    if nuevos:  # idempotente: si no hay nuevos, no se registra nada
+        registrar("asignar", "Examen", examen.pk, {"estudiantes": sorted(nuevos)})
     return len(nuevos), len(existentes)
