@@ -1,12 +1,29 @@
 from django.db.models import Count
-from rest_framework import viewsets
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authentication.permissions import tiene_permiso
 
 from .filters import BancoFilter, PreguntaFilter
 from .models import BancoPreguntas, Materia, Pregunta
-from .serializers import BancoSerializer, MateriaSerializer, PreguntaSerializer
+from .serializers import (
+    ArchivoImportacionSerializer,
+    BancoSerializer,
+    MateriaSerializer,
+    PreguntaSerializer,
+)
+from .services import (
+    exportar_preguntas,
+    generar_plantilla,
+    importar_preguntas,
+    respuesta_excel,
+)
 
 
 class MateriaViewSet(viewsets.ModelViewSet):
@@ -45,6 +62,28 @@ class BancoViewSet(viewsets.ModelViewSet):
         instance.activo = False  # se desactiva, no se borra
         instance.save(update_fields=["activo"])
 
+    @extend_schema(
+        request=ArchivoImportacionSerializer, responses={201: OpenApiTypes.OBJECT}
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=[MultiPartParser],
+        permission_classes=[
+            IsAuthenticated,
+            tiene_permiso("bancos.gestionar"),
+            tiene_permiso("preguntas.gestionar"),
+        ],
+    )
+    def importar(self, request, pk=None):
+        banco = self.get_object()
+        if not banco.activo:
+            raise ValidationError("El banco está inactivo.")
+        serializer = ArchivoImportacionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        total = importar_preguntas(serializer.validated_data["archivo"], banco, request)
+        return Response({"importadas": total}, status=status.HTTP_201_CREATED)
+
 
 class PreguntaViewSet(viewsets.ModelViewSet):
     serializer_class = PreguntaSerializer
@@ -66,3 +105,14 @@ class PreguntaViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.activo = False  # se desactiva, no se borra
         instance.save(update_fields=["activo"])
+
+    @extend_schema(responses={200: OpenApiTypes.BINARY})
+    @action(detail=False, methods=["get"])
+    def exportar(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        return respuesta_excel(exportar_preguntas(queryset), "preguntas.xlsx")
+
+    @extend_schema(responses={200: OpenApiTypes.BINARY})
+    @action(detail=False, methods=["get"])
+    def plantilla(self, request):
+        return respuesta_excel(generar_plantilla(), "plantilla_preguntas.xlsx")

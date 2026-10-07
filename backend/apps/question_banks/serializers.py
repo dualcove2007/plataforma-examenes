@@ -111,3 +111,13 @@ class PreguntaSerializer(serializers.ModelSerializer):
                 [OpcionRespuesta(pregunta=instance, **o) for o in opciones]
             )
         return instance
+
+class ArchivoImportacionSerializer(serializers.Serializer):
+    archivo = serializers.FileField()
+
+    def validate_archivo(self, archivo):
+        if not archivo.name.lower().endswith(".xlsx"):
+            raise serializers.ValidationError("El archivo debe ser .xlsx.")
+        if archivo.size > 2 * 1024 * 1024:
+            raise serializers.ValidationError("El archivo no puede superar 2 MB.")
+        return archivo
