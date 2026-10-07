@@ -13,6 +13,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     "django.contrib.admin",
+    "apps.question_banks",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
