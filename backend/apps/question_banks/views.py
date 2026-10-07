@@ -105,6 +105,18 @@ class PreguntaViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.activo = False  # se desactiva, no se borra
         instance.save(update_fields=["activo"])
+        
+    def perform_update(self, serializer):
+        pregunta = serializer.instance
+        cambia_contenido = set(serializer.validated_data) - {"activo"}
+        if cambia_contenido and pregunta.en_examenes.exclude(
+            examen__estado="borrador"
+        ).exists():
+            raise ValidationError(
+                "La pregunta ya se usa en un examen publicado: "
+                "desactívala y crea una nueva."
+            )
+        serializer.save()
 
     @extend_schema(responses={200: OpenApiTypes.BINARY})
     @action(detail=False, methods=["get"])
