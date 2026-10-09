@@ -51,4 +51,13 @@ export class NotificacionesService {
       .post<{ marcadas: number }>(`${this.url}marcar-todas/`, {})
       .pipe(tap(() => this.refrescarContador()));
   }
+
+  /** Solo se pueden eliminar notificaciones ya leídas. */
+  eliminar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}${id}/`);
+  }
+
+  eliminarLeidas(): Observable<{ eliminadas: number }> {
+    return this.http.delete<{ eliminadas: number }>(`${this.url}eliminar-leidas/`);
+  }
 }

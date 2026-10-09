@@ -80,3 +80,9 @@ def marcar_todas(usuario):
 
 def contar_no_leidas(usuario):
     return Notificacion.objects.filter(usuario=usuario, leida=False).count()
+
+
+
+def eliminar_leidas(usuario):
+    eliminadas, _ = Notificacion.objects.filter(usuario=usuario, leida=True).delete()
+    return eliminadas

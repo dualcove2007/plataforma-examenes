@@ -219,3 +219,39 @@ class LecturaDeNotificacionesTests(NotificacionesBase):
         self.assertIn(c.post(f"/api/notificaciones/{n.pk}/marcar-leida/").status_code, (401, 403))
         self.assertIn(c.post("/api/notificaciones/marcar-todas/").status_code, (401, 403))
         self.assertIn(c.get("/api/notificaciones/no-leidas/").status_code, (401, 403))
+    
+
+    def test_eliminar_una_leida(self):
+        n = self.notificar(self.estudiante, leida=True)
+        r = self.cliente(self.estudiante).delete(f"/api/notificaciones/{n.pk}/")
+        self.assertEqual(r.status_code, 204)
+        self.assertFalse(Notificacion.objects.filter(pk=n.pk).exists())
+
+    def test_no_se_elimina_una_no_leida(self):
+        n = self.notificar(self.estudiante)
+        r = self.cliente(self.estudiante).delete(f"/api/notificaciones/{n.pk}/")
+        self.assertEqual(r.status_code, 400)
+        self.assertTrue(Notificacion.objects.filter(pk=n.pk).exists())
+
+    def test_no_se_elimina_una_ajena(self):
+        ajena = self.notificar(self.otro_estudiante, leida=True)
+        r = self.cliente(self.estudiante).delete(f"/api/notificaciones/{ajena.pk}/")
+        self.assertEqual(r.status_code, 404)
+        self.assertTrue(Notificacion.objects.filter(pk=ajena.pk).exists())
+
+    def test_eliminar_leidas_solo_afecta_las_propias_leidas(self):
+        self.notificar(self.estudiante, leida=True)
+        self.notificar(self.estudiante, leida=True)
+        pendiente = self.notificar(self.estudiante)
+        ajena = self.notificar(self.otro_estudiante, leida=True)
+        r = self.cliente(self.estudiante).delete("/api/notificaciones/eliminar-leidas/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"eliminadas": 2})
+        self.assertTrue(Notificacion.objects.filter(pk=pendiente.pk).exists())
+        self.assertTrue(Notificacion.objects.filter(pk=ajena.pk).exists())
+
+    def test_eliminar_requiere_autenticacion(self):
+        n = self.notificar(self.estudiante, leida=True)
+        c = self.cliente()
+        self.assertIn(c.delete(f"/api/notificaciones/{n.pk}/").status_code, (401, 403))
+        self.assertIn(c.delete("/api/notificaciones/eliminar-leidas/").status_code, (401, 403))

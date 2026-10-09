@@ -22,10 +22,15 @@ const TAMANO_PAGINA = 10;
         </select>
       </label>
       <button type="button" (click)="marcarTodas()">Marcar todas como leídas</button>
+      <button type="button" (click)="eliminarLeidas()">Eliminar leídas</button>
     </p>
 
     @if (error()) {
       <p role="alert">{{ error() }}</p>
+    }
+
+    @if (aviso()) {
+      <p role="status">{{ aviso() }}</p>
     }
 
     @if (cargando()) {
@@ -49,6 +54,9 @@ const TAMANO_PAGINA = 10;
               @if (!n.leida) {
                 <button type="button" (click)="marcar(n)">Marcar como leída</button>
               }
+              @if (n.leida) {
+                <button type="button" (click)="eliminar(n)">Eliminar</button>
+              }
             </div>
           </li>
         }
@@ -71,6 +79,7 @@ export class Notificaciones {
   protected readonly pagina = signal(1);
   protected readonly cargando = signal(false);
   protected readonly error = signal('');
+  protected readonly aviso = signal('');
   protected readonly totalPaginas = computed(() =>
     Math.max(1, Math.ceil(this.total() / TAMANO_PAGINA)),
   );
@@ -123,6 +132,41 @@ export class Notificaciones {
     this.error.set('');
     this.api.marcarTodas().subscribe({
       next: () => this.cargar(),
+      error: (err) => this.error.set(mensajeError(err)),
+    });
+  }
+
+    protected eliminar(n: Notificacion): void {
+    this.error.set('');
+    this.aviso.set('');
+    this.api.eliminar(n.id).subscribe({
+      next: () => {
+        this.aviso.set('Notificación eliminada.');
+        if (this.items().length === 1 && this.pagina() > 1) {
+          this.pagina.update((p) => p - 1);
+        }
+        this.cargar();
+      },
+      error: (err) => this.error.set(mensajeError(err)),
+    });
+  }
+
+  protected eliminarLeidas(): void {
+    if (!confirm('¿Eliminar todas tus notificaciones leídas? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    this.error.set('');
+    this.aviso.set('');
+    this.api.eliminarLeidas().subscribe({
+      next: (r) => {
+        this.aviso.set(
+          r.eliminadas === 0
+            ? 'No había notificaciones leídas para eliminar.'
+            : `Se eliminaron ${r.eliminadas} notificaciones leídas.`,
+        );
+        this.pagina.set(1);
+        this.cargar();
+      },
       error: (err) => this.error.set(mensajeError(err)),
     });
   }
