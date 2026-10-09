@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 
 import { mensajeError } from '../../core/utils/api-error';
 import { guardarArchivo } from '../../core/utils/descargar';
@@ -15,49 +15,60 @@ const LIMITES: Record<string, number> = {
 
 @Component({
   selector: 'app-adjuntos',
-  template: `
-    <section aria-label="Adjuntos">
-      <h3>Adjuntos</h3>
+    template: `
+    @if (visible()) {
+      <section aria-label="Adjuntos">
+        <h3>{{ soloLectura() ? 'Material adjunto' : 'Adjuntos' }}</h3>
 
-      @if (error()) {
-        <p role="alert">{{ error() }}</p>
-      }
+        @if (error()) {
+          <p role="alert">{{ error() }}</p>
+        }
 
-      @if (cargando()) {
-        <p role="status">Cargando adjuntos…</p>
-      } @else {
-        <ul>
-          @for (a of adjuntos(); track a.id) {
-            <li>
-              {{ a.nombre_original }} ({{ tamano(a.tamano) }})
-              <button type="button" (click)="descargar(a)">Descargar</button>
-              <button type="button" (click)="eliminar(a)" [disabled]="trabajando()">
-                Eliminar
-              </button>
-            </li>
-          } @empty {
-            <li>Sin adjuntos.</li>
-          }
-        </ul>
-      }
+        @if (cargando()) {
+          <p role="status">Cargando adjuntos…</p>
+        } @else {
+          <ul>
+            @for (a of adjuntos(); track a.id) {
+              <li>
+                {{ a.nombre_original }} ({{ tamano(a.tamano) }})
+                <button type="button" (click)="descargar(a)">Descargar</button>
+                @if (!soloLectura()) {
+                  <button type="button" (click)="eliminar(a)" [disabled]="trabajando()">
+                    Eliminar
+                  </button>
+                }
+              </li>
+            } @empty {
+              <li>Sin adjuntos.</li>
+            }
+          </ul>
+        }
 
-      <p>
-        <label>
-          Nuevo adjunto (PDF máx. 10 MB; PNG/JPG máx. 5 MB)
-          <input #selector type="file" accept=".pdf,.png,.jpg,.jpeg" />
-        </label>
-        <button type="button" (click)="subir(selector)" [disabled]="trabajando()">
-          {{ trabajando() ? 'Subiendo…' : 'Subir' }}
-        </button>
-      </p>
-    </section>
-  `,
+        @if (!soloLectura()) {
+          <p>
+            <label>
+              Nuevo adjunto (PDF máx. 10 MB; PNG/JPG máx. 5 MB)
+              <input #selector type="file" accept=".pdf,.png,.jpg,.jpeg" />
+            </label>
+            <button type="button" (click)="subir(selector)" [disabled]="trabajando()">
+              {{ trabajando() ? 'Subiendo…' : 'Subir' }}
+            </button>
+          </p>
+        }
+      </section>
+    }`,
 })
 export class Adjuntos {
   private readonly api = inject(AdjuntosService);
 
   readonly tipo = input.required<DuenoAdjunto>();
   readonly objetoId = input.required<number>();
+  readonly soloLectura = input(false);
+
+  /** En solo lectura no se muestra nada si no hay adjuntos (ni mientras carga). */
+  protected readonly visible = computed(
+    () => !this.soloLectura() || this.adjuntos().length > 0 || !!this.error(),
+  );
 
   protected readonly adjuntos = signal<Adjunto[]>([]);
   protected readonly cargando = signal(false);

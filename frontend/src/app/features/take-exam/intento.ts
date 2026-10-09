@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of, switchMap } from 'rxjs';
+import { Adjuntos } from '../adjuntos/adjuntos';
 
 import { mensajeError } from '../../core/utils/api-error';
 import {
@@ -20,7 +21,7 @@ const dos = (n: number) => String(n).padStart(2, '0');
 
 @Component({
   selector: 'app-intento',
-  imports: [RouterLink],
+  imports: [RouterLink, Adjuntos],
   template: `
     @if (error()) {
       <p role="alert">{{ error() }}</p>
@@ -47,10 +48,12 @@ const dos = (n: number) => String(n).padStart(2, '0');
           Tiempo restante: <strong>{{ tiempo() }}</strong> · Respondidas
           {{ respondidas() }} de {{ i.preguntas.length }}
         </p>
+        <app-adjuntos tipo="examen" [objetoId]="i.examen" [soloLectura]="true" />
 
         @for (p of i.preguntas; track p.pregunta) {
           <fieldset>
             <legend>{{ p.orden }}. {{ p.enunciado }} ({{ p.puntaje }} pts)</legend>
+            <app-adjuntos tipo="pregunta" [objetoId]="p.pregunta" [soloLectura]="true" />
 
             @if (p.tipo === 'abierta') {
               <textarea
