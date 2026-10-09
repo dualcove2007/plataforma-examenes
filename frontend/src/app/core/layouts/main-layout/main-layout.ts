@@ -41,6 +41,11 @@ export class MainLayout {
         texto: 'Mis exámenes',
         visible: this.auth.tienePermiso('examenes.rendir'),
       },
+      {
+        ruta: '/resultados',
+        texto: 'Resultados',
+        visible: this.auth.tienePermiso('resultados.ver_todos'),
+      },
     ].filter((e) => e.visible),
   );
 

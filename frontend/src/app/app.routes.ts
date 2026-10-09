@@ -133,6 +133,19 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/take-exam/intento').then((m) => m.IntentoExamen),
       },
+      // ---- Resultados (docente / administrador) ----
+      {
+        path: 'resultados',
+        canActivate: [permisoGuard('resultados.ver_todos')],
+        loadComponent: () =>
+          import('./features/results/resultados-lista').then((m) => m.ResultadosLista),
+      },
+      {
+        path: 'resultados/:id',
+        canActivate: [permisoGuard('resultados.ver_todos')],
+        loadComponent: () =>
+          import('./features/results/resultado-revision').then((m) => m.ResultadoRevision),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
