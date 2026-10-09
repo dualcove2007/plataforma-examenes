@@ -89,6 +89,7 @@ class UsuarioWriteSerializer(serializers.ModelSerializer):
             usuario.refresh_tokens.update(revocado=True)  # cierra las sesiones abiertas
         if not usuario.activo:
             usuario.refresh_tokens.update(revocado=True)
+        return usuario
 
 
 class PermisoSerializer(serializers.ModelSerializer):
