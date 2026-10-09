@@ -31,6 +31,11 @@ export class MainLayout {
         texto: 'Bancos de preguntas',
         visible: this.auth.tienePermiso('bancos.gestionar'),
       },
+      {
+        ruta: '/examenes',
+        texto: 'Exámenes',
+        visible: this.auth.tienePermiso('examenes.gestionar'),
+      },
     ].filter((e) => e.visible),
   );
 

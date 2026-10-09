@@ -95,6 +95,24 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/question-bank/pregunta-form').then((m) => m.PreguntaForm),
       },
+      
+      // ---- Exámenes (docente) ----
+      {
+        path: 'examenes',
+        canActivate: [permisoGuard('examenes.gestionar')],
+        loadComponent: () =>
+          import('./features/exams/examenes-lista').then((m) => m.ExamenesLista),
+      },
+      {
+        path: 'examenes/nuevo',
+        canActivate: [permisoGuard('examenes.gestionar')],
+        loadComponent: () => import('./features/exams/examen-form').then((m) => m.ExamenForm),
+      },
+      {
+        path: 'examenes/:id/editar',
+        canActivate: [permisoGuard('examenes.gestionar')],
+        loadComponent: () => import('./features/exams/examen-form').then((m) => m.ExamenForm),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
