@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { mensajeError } from '../../core/utils/api-error';
 import { Pagina } from '../../core/models/pagina';
@@ -8,8 +9,11 @@ const TAMANO_PAGINA = 10;
 
 @Component({
   selector: 'app-usuarios-lista',
+  imports: [RouterLink],
   template: `
     <h2>Usuarios</h2>
+
+    <p><a routerLink="/usuarios/nuevo">Nuevo usuario</a></p>
 
     <form (submit)="buscar($event, q.value, estado.value)">
       <input #q type="search" placeholder="Buscar por nombre o correo" />
@@ -32,7 +36,7 @@ const TAMANO_PAGINA = 10;
     } @else {
       <table>
         <thead>
-          <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th></tr>
+          <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           @for (u of usuarios(); track u.id) {
@@ -41,6 +45,12 @@ const TAMANO_PAGINA = 10;
               <td>{{ u.email }}</td>
               <td>{{ u.rol_nombre }}</td>
               <td>{{ u.activo ? 'Activo' : 'Inactivo' }}</td>
+              <td>
+                <a [routerLink]="['/usuarios', u.id, 'editar']">Editar</a>
+                @if (u.activo) {
+                  <button type="button" (click)="desactivar(u)">Desactivar</button>
+                }
+              </td>
             </tr>
           }
         </tbody>
@@ -84,6 +94,17 @@ export class UsuariosLista {
   protected irA(pagina: number): void {
     this.pagina.set(pagina);
     this.cargar();
+  }
+
+  protected desactivar(u: UsuarioLista): void {
+    if (!confirm(`¿Desactivar a ${u.nombre}? No podrá iniciar sesión.`)) {
+      return;
+    }
+    this.error.set('');
+    this.servicio.desactivar(u.id).subscribe({
+      next: () => this.cargar(),
+      error: (err) => this.error.set(mensajeError(err)),
+    });
   }
 
   private cargar(): void {

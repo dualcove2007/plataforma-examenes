@@ -22,6 +22,22 @@ export interface FiltrosUsuarios {
   activo?: boolean;
 }
 
+export interface UsuarioEscritura {
+  nombre: string;
+  email: string;
+  rol: number;
+  activo: boolean;
+  password?: string;
+}
+
+export interface UsuarioGuardado {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: number;
+  activo: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsuariosService {
   private readonly http = inject(HttpClient);
@@ -32,5 +48,22 @@ export class UsuariosService {
     if (f.search) params = params.set('search', f.search);
     if (f.activo !== undefined) params = params.set('activo', f.activo);
     return this.http.get<Pagina<UsuarioLista>>(this.url, { params });
+  }
+
+  obtener(id: number): Observable<UsuarioLista> {
+    return this.http.get<UsuarioLista>(`${this.url}${id}/`);
+  }
+
+  crear(datos: UsuarioEscritura): Observable<UsuarioGuardado> {
+    return this.http.post<UsuarioGuardado>(this.url, datos);
+  }
+
+  actualizar(id: number, datos: UsuarioEscritura): Observable<UsuarioGuardado> {
+    return this.http.patch<UsuarioGuardado>(`${this.url}${id}/`, datos);
+  }
+
+  /** El backend no borra: marca al usuario como inactivo y revoca sus sesiones. */
+  desactivar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}${id}/`);
   }
 }

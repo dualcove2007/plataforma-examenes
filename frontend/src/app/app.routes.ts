@@ -25,6 +25,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/users/usuarios-lista').then((m) => m.UsuariosLista),
       },
+      {
+        path: 'usuarios/nuevo',
+        canActivate: [permisoGuard('usuarios.gestionar')],
+        loadComponent: () => import('./features/users/usuario-form').then((m) => m.UsuarioForm),
+      },
+      {
+        path: 'usuarios/:id/editar',
+        canActivate: [permisoGuard('usuarios.gestionar')],
+        loadComponent: () => import('./features/users/usuario-form').then((m) => m.UsuarioForm),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
