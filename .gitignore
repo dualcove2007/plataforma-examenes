@@ -5,3 +5,4 @@ __pycache__/
 node_modules/
 media/
 celerybeat-schedule*
+.pytest_cache/
