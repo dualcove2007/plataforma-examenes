@@ -4,6 +4,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from apps.attempts.models import ResultadoExamen
 from apps.audit.services import registrar
@@ -13,6 +14,7 @@ from apps.exams.models import Examen
 
 from . import services
 from .pdf import generar_constancia_pdf
+from .estadisticas import estadisticas
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -78,3 +80,27 @@ class ConstanciaPdfView(APIView):
             f'attachment; filename="constancia_resultado_{resultado.pk}.pdf"'
         )
         return respuesta
+    
+    
+class EstadisticasView(APIView):
+    """Métricas para el dashboard (el docente solo ve las de sus exámenes)."""
+
+    permission_classes = [IsAuthenticated, tiene_permiso("reportes.ver")]
+
+    @extend_schema(
+        parameters=[OpenApiParameter("examen", int, required=False)],
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    def get(self, request):
+        examen_id = None
+        crudo = request.query_params.get("examen")
+        if crudo not in (None, ""):
+            try:
+                examen_id = int(crudo)
+            except ValueError:
+                raise ValidationError({"examen": "Debe ser un número."})
+
+        datos = estadisticas(request.user, examen_id)
+        if examen_id is not None and datos["examenes"]["total"] == 0:
+            raise NotFound("No existe ese examen.")
+        return Response(datos)

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import ConstanciaPdfView, NotasExcelView
+from .views import ConstanciaPdfView, EstadisticasView, NotasExcelView
 
 urlpatterns = [
     path("reportes/notas/", NotasExcelView.as_view(), name="reporte-notas"),
@@ -9,4 +9,5 @@ urlpatterns = [
         ConstanciaPdfView.as_view(),
         name="reporte-constancia",
     ),
+    path("reportes/estadisticas/", EstadisticasView.as_view(), name="reporte-estadisticas"),
 ]
