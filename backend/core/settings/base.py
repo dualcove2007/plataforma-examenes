@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "apps.attempts",
     "apps.audit",
     "apps.exams",
+    "apps.notifications",
     "apps.question_banks",
     "django.contrib.auth",
     "django.contrib.contenttypes",

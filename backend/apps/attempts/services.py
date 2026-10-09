@@ -7,7 +7,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.exams.models import AsignacionExamen, Examen
 from apps.question_banks.models import Pregunta
 from apps.audit.services import registrar, registrar_transicion
-
+from apps.notifications.services import notificar_resultado_revisado
 from .models import Intento, RespuestaIntento, RespuestaOpcion, ResultadoExamen
 
 NOTA_MAXIMA = 5.0  # escala de la nota: 0 a 5.0
@@ -234,9 +234,11 @@ def _recalcular(intento, docente=None):
 
     resultado, creado = ResultadoExamen.objects.get_or_create(intento=intento)
     anterior = "" if creado else resultado.estado_revision
+
     resultado.puntaje_total = round(total, 2)
     resultado.puntaje_maximo = round(maximo, 2)
     resultado.nota_final = round(total / maximo * NOTA_MAXIMA, 1) if maximo else 0.0
+
     if pendientes == 0:
         resultado.estado_revision = R.REVISADO
         if docente:
@@ -246,11 +248,25 @@ def _recalcular(intento, docente=None):
         resultado.estado_revision = R.EN_REVISION
     else:
         resultado.estado_revision = R.PENDIENTE
+
     resultado.save()
+
     if anterior != resultado.estado_revision:
         registrar_transicion(
-            "Resultado", resultado.pk, anterior, resultado.estado_revision, docente
+            "Resultado",
+            resultado.pk,
+            anterior,
+            resultado.estado_revision,
+            docente,
         )
+
+        # Notificar al estudiante únicamente cuando el resultado
+        # acaba de pasar a REVISADO.
+        if resultado.estado_revision == R.REVISADO:
+            transaction.on_commit(
+                lambda: notificar_resultado_revisado(resultado)
+            )
+
     return resultado
 
 

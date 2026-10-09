@@ -3,6 +3,7 @@ from django.db.models import Max
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from apps.audit.services import registrar, registrar_transicion
+from apps.notifications.services import notificar_asignacion, notificar_publicacion
 
 from apps.authentication.models import Rol, Usuario
 
@@ -34,14 +35,31 @@ def _validar_publicable(examen):
 def cambiar_estado(examen, nuevo, usuario):
     if nuevo not in TRANSICIONES[examen.estado]:
         raise ValidationError(f"No se puede pasar de '{examen.estado}' a '{nuevo}'.")
+
     if nuevo == E.PUBLICADO:
         _validar_publicable(examen)
+
     anterior = examen.estado
     examen.estado = nuevo
     examen.save(update_fields=["estado"])
-    registrar_transicion("Examen", examen.pk, anterior, nuevo, usuario)
-    return examen
 
+    registrar_transicion(
+        "Examen",
+        examen.pk,
+        anterior,
+        nuevo,
+        usuario,
+    )
+
+    # Cuando el examen se publica, notificar a todos
+    # los estudiantes que ya estaban asignados.
+    if nuevo == E.PUBLICADO:
+        def enviar_notificaciones():
+            notificar_publicacion(examen)
+
+        transaction.on_commit(enviar_notificaciones)
+
+    return examen
 
 def agregar_pregunta(examen, pregunta, puntaje=None):
     exigir_borrador(examen)
@@ -92,5 +110,20 @@ def asignar_estudiantes(examen, ids):
         [AsignacionExamen(examen=examen, estudiante_id=i) for i in nuevos]
     )
     if nuevos:  # idempotente: si no hay nuevos, no se registra nada
-        registrar("asignar", "Examen", examen.pk, {"estudiantes": sorted(nuevos)})
+        nuevos_lista = sorted(nuevos)
+
+        registrar(
+            "asignar",
+            "Examen",
+            examen.pk,
+            {"estudiantes": nuevos_lista},
+        )
+
+        # Si el examen ya está publicado, los nuevos estudiantes
+        # reciben inmediatamente su notificación.
+        if examen.estado == E.PUBLICADO:
+            transaction.on_commit(
+                lambda: notificar_asignacion(examen, nuevos_lista)
+            )
+
     return len(nuevos), len(existentes)
