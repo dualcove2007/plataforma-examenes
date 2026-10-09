@@ -5,12 +5,14 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.attempts.models import ResultadoExamen
 from apps.audit.services import registrar
 from apps.authentication.models import Rol
 from apps.authentication.permissions import tiene_permiso
 from apps.exams.models import Examen
 
 from . import services
+from .pdf import generar_constancia_pdf
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -43,5 +45,36 @@ class NotasExcelView(APIView):
         respuesta = HttpResponse(contenido, content_type=XLSX)
         respuesta["Content-Disposition"] = (
             f'attachment; filename="notas_examen_{examen.pk}.xlsx"'
+        )
+        return respuesta
+
+
+class ConstanciaPdfView(APIView):
+    """Constancia en PDF de un resultado propio ya revisado."""
+
+    permission_classes = [IsAuthenticated, tiene_permiso("resultados.ver_propios")]
+
+    @extend_schema(responses={(200, "application/pdf"): OpenApiTypes.BINARY})
+    def get(self, request, resultado_id):
+        resultado = (
+            ResultadoExamen.objects.select_related(
+                "intento__asignacion__examen__materia",
+                "intento__asignacion__estudiante",
+                "revisado_por",
+            )
+            .filter(pk=resultado_id, intento__asignacion__estudiante=request.user)
+            .first()
+        )
+        if resultado is None:
+            raise NotFound("No existe ese resultado.")
+        if resultado.estado_revision != ResultadoExamen.Revision.REVISADO:
+            raise ValidationError("El resultado aún no ha sido revisado.")
+
+        contenido = generar_constancia_pdf(resultado)
+        registrar("exportar", "Resultado", resultado.pk, {"reporte": "constancia"})
+
+        respuesta = HttpResponse(contenido, content_type="application/pdf")
+        respuesta["Content-Disposition"] = (
+            f'attachment; filename="constancia_resultado_{resultado.pk}.pdf"'
         )
         return respuesta
