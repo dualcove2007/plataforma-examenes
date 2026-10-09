@@ -6,6 +6,12 @@
         <span class="nombre">{{ u.nombre }}</span>
         <span class="rol">{{ u.rol }}</span>
       }
+      <a routerLink="/notificaciones" class="campana">
+        Notificaciones
+        @if (noLeidas() > 0) {
+          <span class="contador">{{ noLeidas() }}</span>
+        }
+      </a>
       <button type="button" (click)="salir()">Cerrar sesión</button>
     </div>
   </header>

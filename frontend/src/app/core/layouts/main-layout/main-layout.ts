@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, DestroyRef, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
+import { NotificacionesService } from '../../../features/notifications/notificaciones.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -11,6 +12,14 @@ import { AuthService } from '../../services/auth.service';
 })
 export class MainLayout {
   protected readonly auth = inject(AuthService);
+  private readonly notificaciones = inject(NotificacionesService);
+  protected readonly noLeidas = this.notificaciones.noLeidas;
+
+  constructor() {
+    this.notificaciones.refrescarContador();
+    const reloj = setInterval(() => this.notificaciones.refrescarContador(), 60_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(reloj));
+  }
 
   // Se irá ampliando por rol a medida que se construyan los módulos.
   protected readonly enlaces = computed(() =>

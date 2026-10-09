@@ -159,6 +159,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/results/mi-resultado').then((m) => m.MiResultado),
       },
+      {
+        path: 'notificaciones',
+        loadComponent: () =>
+          import('./features/notifications/notificaciones').then((m) => m.Notificaciones),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
