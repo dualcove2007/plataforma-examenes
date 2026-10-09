@@ -12,7 +12,7 @@
 
   <div class="cuerpo">
     <nav class="menu" aria-label="Principal">
-      @for (e of enlaces; track e.ruta) {
+      @for (e of enlaces(); track e.ruta) {
         <a [routerLink]="e.ruta" routerLinkActive="activo">{{ e.texto }}</a>
       }
     </nav>

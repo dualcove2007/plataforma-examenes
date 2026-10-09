@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, permisoGuard } from './core/guards/auth.guard';
 import { MainLayout } from './core/layouts/main-layout/main-layout';
 
 export const routes: Routes = [
@@ -18,6 +18,12 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
+        path: 'usuarios',
+        canActivate: [permisoGuard('usuarios.gestionar')],
+        loadComponent: () =>
+          import('./features/users/usuarios-lista').then((m) => m.UsuariosLista),
       },
     ],
   },
