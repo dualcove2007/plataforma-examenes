@@ -146,6 +146,19 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/results/resultado-revision').then((m) => m.ResultadoRevision),
       },
+      
+      {
+        path: 'mis-resultados',
+        canActivate: [permisoGuard('resultados.ver_propios')],
+        loadComponent: () =>
+          import('./features/results/mis-resultados').then((m) => m.MisResultados),
+      },
+      {
+        path: 'mis-resultados/:id',
+        canActivate: [permisoGuard('resultados.ver_propios')],
+        loadComponent: () =>
+          import('./features/results/mi-resultado').then((m) => m.MiResultado),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
