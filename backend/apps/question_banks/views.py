@@ -1,4 +1,5 @@
-from django.db.models import Count
+from django.db import transaction
+from django.db.models import Count, ProtectedError
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
@@ -24,6 +25,22 @@ from .services import (
     importar_preguntas,
     respuesta_excel,
 )
+
+
+def eliminar_o_desactivar(instancia, mensaje_desactivado):
+    """Borra el registro; si otros datos dependen de él (PROTECT), solo lo desactiva.
+
+    Así se conserva el historial de exámenes, respuestas y resultados.
+    Responde 200 con {"accion": "eliminado" | "desactivado", "mensaje": ...}.
+    """
+    try:
+        with transaction.atomic():
+            instancia.delete()
+    except ProtectedError:
+        instancia.activo = False
+        instancia.save(update_fields=["activo"])
+        return Response({"accion": "desactivado", "mensaje": mensaje_desactivado})
+    return Response({"accion": "eliminado", "mensaje": "Eliminado correctamente."})
 
 
 class MateriaViewSet(viewsets.ModelViewSet):
@@ -58,9 +75,13 @@ class BancoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(docente=self.request.user)
 
-    def perform_destroy(self, instance):
-        instance.activo = False  # se desactiva, no se borra
-        instance.save(update_fields=["activo"])
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def destroy(self, request, *args, **kwargs):
+        # Sin preguntas se borra de verdad; con preguntas solo se desactiva.
+        return eliminar_o_desactivar(
+            self.get_object(),
+            "El banco tiene preguntas: se desactivó en lugar de eliminarse.",
+        )
 
     @extend_schema(
         request=ArchivoImportacionSerializer, responses={201: OpenApiTypes.OBJECT}
@@ -102,10 +123,15 @@ class PreguntaViewSet(viewsets.ModelViewSet):
             .order_by("-id")
         )
 
-    def perform_destroy(self, instance):
-        instance.activo = False  # se desactiva, no se borra
-        instance.save(update_fields=["activo"])
-        
+    @extend_schema(responses={200: OpenApiTypes.OBJECT})
+    def destroy(self, request, *args, **kwargs):
+        # Sin uso se borra de verdad; si está en un examen o tiene respuestas, solo se desactiva.
+        return eliminar_o_desactivar(
+            self.get_object(),
+            "La pregunta ya se usa en un examen o tiene respuestas: "
+            "se desactivó en lugar de eliminarse.",
+        )
+
     def perform_update(self, serializer):
         pregunta = serializer.instance
         cambia_contenido = set(serializer.validated_data) - {"activo"}
