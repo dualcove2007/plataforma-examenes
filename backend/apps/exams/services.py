@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -127,3 +128,16 @@ def asignar_estudiantes(examen, ids):
             )
 
     return len(nuevos), len(existentes)
+
+
+MARGEN_CIERRE_SEGUNDOS = 60  # deja que primero expiren los intentos abiertos
+
+
+def cerrar_examenes_vencidos():
+    """Pasa a 'cerrado' los exámenes publicados cuya fecha_fin ya pasó."""
+    limite = timezone.now() - timedelta(seconds=MARGEN_CIERRE_SEGUNDOS)
+    total = 0
+    for examen in Examen.objects.filter(estado=E.PUBLICADO, fecha_fin__lt=limite):
+        cambiar_estado(examen, E.CERRADO, None)
+        total += 1
+    return total

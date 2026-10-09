@@ -123,3 +123,22 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:4200"]
+
+# --- Celery ---
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 5 * 60
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BEAT_SCHEDULE = {
+    "expirar-intentos-vencidos": {
+        "task": "attempts.expirar_intentos_vencidos",
+        "schedule": 60.0,   # cada minuto
+    },
+    "cerrar-examenes-vencidos": {
+        "task": "exams.cerrar_examenes_vencidos",
+        "schedule": 300.0,  # cada 5 minutos
+    },
+}
