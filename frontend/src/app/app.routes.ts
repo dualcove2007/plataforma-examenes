@@ -55,6 +55,26 @@ export const routes: Routes = [
         canActivate: [permisoGuard('materias.gestionar')],
         loadComponent: () => import('./features/materias/materia-form').then((m) => m.MateriaForm),
       },
+
+      // ---- Bancos de preguntas (docente) ----
+      {
+        path: 'bancos',
+        canActivate: [permisoGuard('bancos.gestionar')],
+        loadComponent: () =>
+          import('./features/question-bank/bancos-lista').then((m) => m.BancosLista),
+      },
+      {
+        path: 'bancos/nuevo',
+        canActivate: [permisoGuard('bancos.gestionar')],
+        loadComponent: () =>
+          import('./features/question-bank/banco-form').then((m) => m.BancoForm),
+      },
+      {
+        path: 'bancos/:id/editar',
+        canActivate: [permisoGuard('bancos.gestionar')],
+        loadComponent: () =>
+          import('./features/question-bank/banco-form').then((m) => m.BancoForm),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

@@ -26,6 +26,11 @@ export class MainLayout {
         texto: 'Materias',
         visible: this.auth.tienePermiso('materias.gestionar'),
       },
+      {
+        ruta: '/bancos',
+        texto: 'Bancos de preguntas',
+        visible: this.auth.tienePermiso('bancos.gestionar'),
+      },
     ].filter((e) => e.visible),
   );
 
