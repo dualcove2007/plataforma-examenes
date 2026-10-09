@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-
+import { Adjuntos } from '../adjuntos/adjuntos';
 import { mensajeError } from '../../core/utils/api-error';
 import {
   DIFICULTADES,
@@ -16,7 +16,7 @@ import {
 
 @Component({
   selector: 'app-pregunta-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Adjuntos],
   template: `
     <h2>{{ editando ? 'Editar pregunta' : 'Nueva pregunta' }}</h2>
 
@@ -118,6 +118,9 @@ import {
         </button>
         <a [routerLink]="['/bancos', banco, 'preguntas']">Cancelar</a>
       </form>
+      @if (id !== null) {
+        <app-adjuntos tipo="pregunta" [objetoId]="id" />
+      }
     }
   `,
 })
@@ -127,7 +130,7 @@ export class PreguntaForm {
   private readonly router = inject(Router);
   private readonly preguntas = inject(PreguntasService);
 
-  private readonly id = Number(this.route.snapshot.paramMap.get('id')) || null;
+  protected readonly id = Number(this.route.snapshot.paramMap.get('id')) || null;
 
   /** Banco al que pertenece la pregunta (al editar se toma de la propia pregunta). */
   protected banco = Number(this.route.snapshot.paramMap.get('bancoId'));

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-
+import { Adjuntos } from '../adjuntos/adjuntos';
 import { mensajeError } from '../../core/utils/api-error';
 import { inputLocalAIso, isoAInputLocal } from '../../core/utils/fechas';
 import { Materia, MateriasService } from '../materias/materias.service';
@@ -9,7 +9,7 @@ import { ExamenesService } from './examenes.service';
 
 @Component({
   selector: 'app-examen-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Adjuntos],
   template: `
     <h2>{{ editando ? 'Editar examen' : 'Nuevo examen' }}</h2>
 
@@ -84,6 +84,9 @@ import { ExamenesService } from './examenes.service';
         </button>
         <a routerLink="/examenes">Cancelar</a>
       </form>
+      @if (id !== null) {
+        <app-adjuntos tipo="examen" [objetoId]="id" />
+      }
     }
   `,
 })
@@ -94,7 +97,7 @@ export class ExamenForm {
   private readonly examenes = inject(ExamenesService);
   private readonly materiasApi = inject(MateriasService);
 
-  private readonly id = Number(this.route.snapshot.paramMap.get('id')) || null;
+  protected readonly id = Number(this.route.snapshot.paramMap.get('id')) || null;
 
   protected readonly editando = this.id !== null;
   protected readonly materias = signal<Materia[]>([]);
