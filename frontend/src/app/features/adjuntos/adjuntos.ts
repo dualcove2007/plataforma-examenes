@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 
 import { mensajeError } from '../../core/utils/api-error';
 import { guardarArchivo } from '../../core/utils/descargar';
@@ -29,7 +29,14 @@ const LIMITES: Record<string, number> = {
         } @else {
           <ul>
             @for (a of adjuntos(); track a.id) {
-              <li>
+                <li>
+                @if (vistas()[a.id]; as src) {
+                  <img
+                    [src]="src"
+                    [alt]="a.nombre_original"
+                    style="display: block; max-width: 100%; max-height: 320px"
+                  />
+                }
                 {{ a.nombre_original }} ({{ tamano(a.tamano) }})
                 <button type="button" (click)="descargar(a)">Descargar</button>
                 @if (!soloLectura()) {
@@ -60,6 +67,11 @@ const LIMITES: Record<string, number> = {
 })
 export class Adjuntos {
   private readonly api = inject(AdjuntosService);
+  private readonly destroyRef = inject(DestroyRef);
+  private destruido = false;
+
+  /** id del adjunto -> URL temporal (blob:) para mostrar la imagen. */
+  protected readonly vistas = signal<Record<number, string>>({});
 
   readonly tipo = input.required<DuenoAdjunto>();
   readonly objetoId = input.required<number>();
@@ -76,6 +88,11 @@ export class Adjuntos {
   protected readonly error = signal('');
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.destruido = true;
+      this.liberarVistas();
+    });
+    
     effect(() => {
       this.tipo();
       this.objetoId();
@@ -86,15 +103,46 @@ export class Adjuntos {
   private cargar(): void {
     this.cargando.set(true);
     this.api.listar(this.tipo(), this.objetoId()).subscribe({
-      next: (lista) => {
+        next: (lista) => {
+        this.liberarVistas();
         this.adjuntos.set(lista);
         this.cargando.set(false);
+        lista.forEach((a) => this.cargarVista(a));
       },
       error: (err) => {
         this.error.set(mensajeError(err));
         this.cargando.set(false);
       },
     });
+  }
+
+  private cargarVista(a: Adjunto): void {
+    if (!a.tipo_mime.startsWith('image/')) return;
+    this.api.descargar(a.id).subscribe({
+      next: (blob) => {
+        if (this.destruido) return;
+        this.vistas.update((v) => ({ ...v, [a.id]: URL.createObjectURL(blob) }));
+      },
+      error: () => {
+        // Sin vista previa: el botón "Descargar" sigue funcionando.
+      },
+    });
+  }
+
+  private liberarVista(id: number): void {
+    const url = this.vistas()[id];
+    if (!url) return;
+    URL.revokeObjectURL(url);
+    this.vistas.update((v) => {
+      const copia = { ...v };
+      delete copia[id];
+      return copia;
+    });
+  }
+
+  private liberarVistas(): void {
+    Object.values(this.vistas()).forEach((url) => URL.revokeObjectURL(url));
+    this.vistas.set({});
   }
 
   protected tamano(bytes: number): string {
@@ -125,8 +173,9 @@ export class Adjuntos {
 
     this.trabajando.set(true);
     this.api.subir(this.tipo(), this.objetoId(), archivo).subscribe({
-      next: (nuevo) => {
+        next: (nuevo) => {
         this.adjuntos.update((lista) => [nuevo, ...lista]);
+        this.cargarVista(nuevo);
         selector.value = '';
         this.trabajando.set(false);
       },
@@ -150,7 +199,8 @@ export class Adjuntos {
     this.error.set('');
     this.trabajando.set(true);
     this.api.eliminar(a.id).subscribe({
-      next: () => {
+        next: () => {
+        this.liberarVista(a.id);
         this.adjuntos.update((lista) => lista.filter((x) => x.id !== a.id));
         this.trabajando.set(false);
       },
