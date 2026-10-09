@@ -57,8 +57,14 @@ export class BancosService {
     return this.http.patch<Partial<Banco>>(`${this.url}${id}/`, datos);
   }
 
-    /** Borra el banco si no tiene preguntas; si las tiene, el backend solo lo desactiva. */
+  /** Borra el banco si no tiene preguntas; si las tiene, el backend solo lo desactiva. */
   eliminar(id: number): Observable<ResultadoBorrado> {
     return this.http.delete<ResultadoBorrado>(`${this.url}${id}/`);
+  }
+
+  importar(id: number, archivo: File): Observable<{ importadas: number }> {
+    const datos = new FormData();
+    datos.append('archivo', archivo);
+    return this.http.post<{ importadas: number }>(`${this.url}${id}/importar/`, datos);
   }
 }

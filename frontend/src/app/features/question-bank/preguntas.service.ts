@@ -109,4 +109,17 @@ export class PreguntasService {
   eliminar(id: number): Observable<ResultadoBorrado> {
     return this.http.delete<ResultadoBorrado>(`${this.url}${id}/`);
   }
+
+  plantilla(): Observable<Blob> {
+    return this.http.get(`${this.url}plantilla/`, { responseType: 'blob' });
+  }
+
+  exportar(f: Omit<FiltrosPreguntas, 'page'>): Observable<Blob> {
+    let params = new HttpParams().set('banco', f.banco);
+    if (f.search) params = params.set('search', f.search);
+    if (f.tipo) params = params.set('tipo', f.tipo);
+    if (f.dificultad) params = params.set('dificultad', f.dificultad);
+    if (f.activo !== undefined) params = params.set('activo', f.activo);
+    return this.http.get(`${this.url}exportar/`, { params, responseType: 'blob' });
+  }
 }

@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-
+import { guardarArchivo } from '../../core/utils/descargar';
 import { Pagina } from '../../core/models/pagina';
 import { mensajeError } from '../../core/utils/api-error';
 import { Banco, BancosService } from './bancos.service';
@@ -26,6 +26,13 @@ const TAMANO_PAGINA = 10;
     <h2>Preguntas @if (banco(); as b) { <small>de «{{ b.titulo }}»</small> }</h2>
 
     <p><a [routerLink]="['/bancos', bancoId, 'preguntas', 'nueva']">Nueva pregunta</a></p>
+
+    <p>
+      <button type="button" (click)="plantilla()">Descargar plantilla</button>
+      <button type="button" (click)="exportar()">Exportar a Excel</button>
+      <input #archivo type="file" accept=".xlsx" />
+      <button type="button" (click)="importar(archivo)">Importar</button>
+    </p>
 
     <form (submit)="buscar($event, q.value, tipo.value, dificultad.value, estado.value)">
       <input #q type="search" placeholder="Buscar en el enunciado" />
@@ -167,6 +174,47 @@ export class PreguntasLista {
         if (r.accion === 'eliminado' && this.preguntas().length === 1 && this.pagina() > 1) {
           this.pagina.update((n) => n - 1);
         }
+        this.cargar();
+      },
+      error: (err) => this.error.set(mensajeError(err)),
+    });
+  }
+
+  protected plantilla(): void {
+    this.servicio.plantilla().subscribe({
+      next: (b) => guardarArchivo(b, 'plantilla_preguntas.xlsx'),
+      error: (err) => this.error.set(mensajeError(err)),
+    });
+  }
+
+  protected exportar(): void {
+    this.servicio
+      .exportar({
+        banco: this.bancoId,
+        search: this.search,
+        tipo: this.tipo,
+        dificultad: this.dificultad,
+        activo: this.activo,
+      })
+      .subscribe({
+        next: (b) => guardarArchivo(b, 'preguntas.xlsx'),
+        error: (err) => this.error.set(mensajeError(err)),
+      });
+  }
+
+  protected importar(input: HTMLInputElement): void {
+    const archivo = input.files?.[0];
+    if (!archivo) {
+      this.error.set('Selecciona un archivo .xlsx.');
+      return;
+    }
+    this.error.set('');
+    this.aviso.set('');
+    this.bancosApi.importar(this.bancoId, archivo).subscribe({
+      next: (r) => {
+        this.aviso.set(`Se importaron ${r.importadas} preguntas.`);
+        input.value = '';
+        this.pagina.set(1);
         this.cargar();
       },
       error: (err) => this.error.set(mensajeError(err)),
