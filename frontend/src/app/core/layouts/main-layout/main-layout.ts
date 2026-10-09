@@ -36,6 +36,11 @@ export class MainLayout {
         texto: 'Exámenes',
         visible: this.auth.tienePermiso('examenes.gestionar'),
       },
+      {
+        ruta: '/mis-examenes',
+        texto: 'Mis exámenes',
+        visible: this.auth.tienePermiso('examenes.rendir'),
+      },
     ].filter((e) => e.visible),
   );
 

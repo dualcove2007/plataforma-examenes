@@ -119,6 +119,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/exams/examen-detalle').then((m) => m.ExamenDetalle),
       },
+
+      // ---- Estudiante ----
+      {
+        path: 'mis-examenes',
+        canActivate: [permisoGuard('examenes.rendir')],
+        loadComponent: () =>
+          import('./features/take-exam/mis-examenes').then((m) => m.MisExamenes),
+      },
+      {
+        path: 'intentos/:id',
+        canActivate: [permisoGuard('examenes.rendir')],
+        loadComponent: () =>
+          import('./features/take-exam/intento').then((m) => m.IntentoExamen),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
