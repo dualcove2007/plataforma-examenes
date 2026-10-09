@@ -21,6 +21,11 @@ export class MainLayout {
         texto: 'Usuarios',
         visible: this.auth.tienePermiso('usuarios.gestionar'),
       },
+      {
+        ruta: '/materias',
+        texto: 'Materias',
+        visible: this.auth.tienePermiso('materias.gestionar'),
+      },
     ].filter((e) => e.visible),
   );
 

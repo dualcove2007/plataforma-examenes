@@ -19,6 +19,8 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
+
+      // ---- Usuarios (administrador) ----
       {
         path: 'usuarios',
         canActivate: [permisoGuard('usuarios.gestionar')],
@@ -34,6 +36,24 @@ export const routes: Routes = [
         path: 'usuarios/:id/editar',
         canActivate: [permisoGuard('usuarios.gestionar')],
         loadComponent: () => import('./features/users/usuario-form').then((m) => m.UsuarioForm),
+      },
+
+      // ---- Materias (administrador) ----
+      {
+        path: 'materias',
+        canActivate: [permisoGuard('materias.gestionar')],
+        loadComponent: () =>
+          import('./features/materias/materias-lista').then((m) => m.MateriasLista),
+      },
+      {
+        path: 'materias/nueva',
+        canActivate: [permisoGuard('materias.gestionar')],
+        loadComponent: () => import('./features/materias/materia-form').then((m) => m.MateriaForm),
+      },
+      {
+        path: 'materias/:id/editar',
+        canActivate: [permisoGuard('materias.gestionar')],
+        loadComponent: () => import('./features/materias/materia-form').then((m) => m.MateriaForm),
       },
     ],
   },
