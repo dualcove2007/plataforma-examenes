@@ -13,3 +13,11 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MIDDLEWARE = list(MIDDLEWARE)  # noqa: F405
 MIDDLEWARE.insert(2, "whitenoise.middleware.WhiteNoiseMiddleware")
+
+# Caché compartida entre los workers (necesaria para que el límite de intentos sea real).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,  # noqa: F405
+    }
+}

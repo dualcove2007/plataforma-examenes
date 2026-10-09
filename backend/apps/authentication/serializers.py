@@ -47,6 +47,17 @@ class UsuarioWriteSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ["id", "nombre", "email", "password", "rol", "activo"]
 
+    def validate_rol(self, value):
+        request = self.context.get("request")
+        if (
+            self.instance
+            and request
+            and self.instance.pk == request.user.pk
+            and value != self.instance.rol
+        ):
+            raise serializers.ValidationError("No puedes cambiar tu propio rol.")
+        return value
+
     def validate_activo(self, value):
         request = self.context.get("request")
         if (
@@ -75,9 +86,9 @@ class UsuarioWriteSerializer(serializers.ModelSerializer):
         if password:
             usuario.set_password(password)
             usuario.save(update_fields=["password"])
+            usuario.refresh_tokens.update(revocado=True)  # cierra las sesiones abiertas
         if not usuario.activo:
             usuario.refresh_tokens.update(revocado=True)
-        return usuario
 
 
 class PermisoSerializer(serializers.ModelSerializer):

@@ -6,6 +6,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.audit.services import registrar
+from rest_framework.exceptions import Throttled
+
+from .throttles import LoginEmailThrottle, LoginIPThrottle
 
 from .serializers import (
     LoginSerializer,
@@ -19,6 +22,14 @@ from .services import AutenticacionFallida, emitir_tokens, renovar_tokens, revoc
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    
+    throttle_classes = [LoginIPThrottle, LoginEmailThrottle]
+
+    def throttled(self, request, wait):
+        raise Throttled(
+            wait=wait,
+            detail="Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.",
+        )
 
     @extend_schema(request=LoginSerializer, responses=TokensSerializer)
     def post(self, request):

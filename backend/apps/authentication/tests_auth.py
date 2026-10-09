@@ -91,6 +91,41 @@ class AutenticacionTests(TestCase):
         refresh = self.login().data["refresh"]
         self.assertEqual(RefreshToken.objects.filter(usuario=self.docente).count(), 1)
         self.assertFalse(RefreshToken.objects.filter(token_hash=refresh).exists())
+        
+    def test_login_se_limita_por_correo(self):
+        for _ in range(5):
+            self.assertEqual(self.login(password="mala").status_code, 401)
+        r = self.login(password="mala")
+        self.assertEqual(r.status_code, 429)
+        self.assertIn("Demasiados intentos", r.data["error"]["mensaje"])
+        # Mientras dure el bloqueo, ni la clave correcta entra
+        self.assertEqual(self.login().status_code, 429)
+
+    def test_login_se_limita_por_ip(self):
+        for i in range(20):
+            self.assertEqual(self.login(email=f"nadie{i}@demo.com").status_code, 401)
+        self.assertEqual(self.login(email="otro@demo.com").status_code, 429)
+
+    def test_cambiar_password_revoca_los_refresh_tokens(self):
+        refresh = self.login().data["refresh"]
+        admin = self.con_token(self.login("admin@demo.com").data["access"])
+        r = admin.patch(
+            f"/api/usuarios/{self.docente.pk}/",
+            {"password": "NuevaClave987*"},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.refrescar(refresh).status_code, 401)
+
+    def test_admin_no_puede_cambiar_su_propio_rol(self):
+        admin_user = Usuario.objects.get(email="admin@demo.com")
+        admin = self.con_token(self.login("admin@demo.com").data["access"])
+        r = admin.patch(
+            f"/api/usuarios/{admin_user.pk}/",
+            {"rol": self.docente.rol_id},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 400)
 
     # ---------- refresh ----------
     def test_refresh_devuelve_tokens_nuevos(self):

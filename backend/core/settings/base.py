@@ -110,6 +110,10 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {
+        "login_ip": "20/min",
+        "login_email": "5/min",
+    },
 }
 
 SIMPLE_JWT = {
