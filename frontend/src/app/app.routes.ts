@@ -75,6 +75,26 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/question-bank/banco-form').then((m) => m.BancoForm),
       },
+
+      // ---- Preguntas de un banco (docente) ----
+      {
+        path: 'bancos/:bancoId/preguntas',
+        canActivate: [permisoGuard('preguntas.gestionar')],
+        loadComponent: () =>
+          import('./features/question-bank/preguntas-lista').then((m) => m.PreguntasLista),
+      },
+      {
+        path: 'bancos/:bancoId/preguntas/nueva',
+        canActivate: [permisoGuard('preguntas.gestionar')],
+        loadComponent: () =>
+          import('./features/question-bank/pregunta-form').then((m) => m.PreguntaForm),
+      },
+      {
+        path: 'bancos/:bancoId/preguntas/:id/editar',
+        canActivate: [permisoGuard('preguntas.gestionar')],
+        loadComponent: () =>
+          import('./features/question-bank/pregunta-form').then((m) => m.PreguntaForm),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

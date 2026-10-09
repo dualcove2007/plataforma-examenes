@@ -35,6 +35,9 @@ const TAMANO_PAGINA = 10;
     @if (error()) {
       <p role="alert">{{ error() }}</p>
     }
+    @if (aviso()) {
+      <p role="status">{{ aviso() }}</p>
+    }
 
     @if (cargando()) {
       <p>Cargando…</p>
@@ -56,9 +59,8 @@ const TAMANO_PAGINA = 10;
               <td>{{ b.activo ? 'Activo' : 'Inactivo' }}</td>
               <td>
                 <a [routerLink]="['/bancos', b.id, 'editar']">Editar</a>
-                @if (b.activo) {
-                  <button type="button" (click)="desactivar(b)">Desactivar</button>
-                }
+                <a [routerLink]="['/bancos', b.id, 'preguntas']">Preguntas</a>
+                <button type="button" (click)="eliminar(b)">Eliminar</button>
               </td>
             </tr>
           }
@@ -83,6 +85,7 @@ export class BancosLista {
   protected readonly pagina = signal(1);
   protected readonly cargando = signal(false);
   protected readonly error = signal('');
+  protected readonly aviso = signal('');
   protected readonly totalPaginas = computed(() =>
     Math.max(1, Math.ceil(this.total() / TAMANO_PAGINA)),
   );
@@ -113,13 +116,25 @@ export class BancosLista {
     this.cargar();
   }
 
-  protected desactivar(b: Banco): void {
-    if (!confirm(`¿Desactivar el banco "${b.titulo}"? Ya no se podrán agregar preguntas.`)) {
+  protected eliminar(b: Banco): void {
+    if (
+      !confirm(
+        `¿Eliminar el banco "${b.titulo}"? Si tiene preguntas no se borrará: solo se desactivará.`,
+      )
+    ) {
       return;
     }
     this.error.set('');
-    this.servicio.desactivar(b.id).subscribe({
-      next: () => this.cargar(),
+    this.aviso.set('');
+    this.servicio.eliminar(b.id).subscribe({
+      next: (r) => {
+        this.aviso.set(r.mensaje);
+        // Si era el único elemento de la última página, retrocede una página.
+        if (r.accion === 'eliminado' && this.bancos().length === 1 && this.pagina() > 1) {
+          this.pagina.update((p) => p - 1);
+        }
+        this.cargar();
+      },
       error: (err) => this.error.set(mensajeError(err)),
     });
   }

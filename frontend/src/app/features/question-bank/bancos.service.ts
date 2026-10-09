@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-
+import { ResultadoBorrado } from '../../core/models/borrado';
 import { environment } from '../../../environments/environment';
 import { Pagina } from '../../core/models/pagina';
 
@@ -57,8 +57,8 @@ export class BancosService {
     return this.http.patch<Partial<Banco>>(`${this.url}${id}/`, datos);
   }
 
-  /** El backend no borra: marca el banco como inactivo. */
-  desactivar(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}${id}/`);
+    /** Borra el banco si no tiene preguntas; si las tiene, el backend solo lo desactiva. */
+  eliminar(id: number): Observable<ResultadoBorrado> {
+    return this.http.delete<ResultadoBorrado>(`${this.url}${id}/`);
   }
 }
