@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.authentication.permissions import tiene_permiso
+from apps.authentication.models import Rol, Usuario
 
 from . import services
 from .filters import ExamenFilter
@@ -16,6 +17,7 @@ from .serializers import (
     AgregarPreguntaSerializer,
     AsignacionSerializer,
     AsignarSerializer,
+    EstudianteSerializer,
     ExamenDetalleSerializer,
     ExamenPreguntaSerializer,
     ExamenSerializer,
@@ -163,3 +165,17 @@ class MisExamenesViewSet(viewsets.ReadOnlyModelViewSet):
             .annotate(total_preguntas=Count("examen__items"))
             .order_by("examen__fecha_inicio")
         )
+        
+
+class EstudianteViewSet(viewsets.ReadOnlyModelViewSet):
+    """Estudiantes activos, para que el docente los asigne a sus exámenes."""
+
+    serializer_class = EstudianteSerializer
+    permission_classes = [IsAuthenticated, tiene_permiso("examenes.asignar")]
+    search_fields = ["nombre", "email"]
+    ordering_fields = ["nombre"]
+
+    def get_queryset(self):
+        return Usuario.objects.filter(
+            activo=True, rol__nombre=Rol.ESTUDIANTE
+        ).order_by("nombre")

@@ -64,6 +64,7 @@ const TAMANO_PAGINA = 10;
               <td>{{ e.total_preguntas }}</td>
               <td>{{ etiquetaEstado[e.estado] }}</td>
               <td>
+                <a [routerLink]="['/examenes', e.id]">Detalle</a>
                 @if (e.estado === 'borrador') {
                   <a [routerLink]="['/examenes', e.id, 'editar']">Editar</a>
                   <button type="button" (click)="cambiarEstado(e, 'publicar')">Publicar</button>

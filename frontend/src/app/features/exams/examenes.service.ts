@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-
+import { Tipo } from '../question-bank/preguntas.service';
 import { environment } from '../../../environments/environment';
 import { Pagina } from '../../core/models/pagina';
 
@@ -51,6 +51,35 @@ export interface FiltrosExamenes {
   estado?: EstadoExamen;
 }
 
+export interface ExamenPregunta {
+  id: number;
+  pregunta: number;
+  orden: number;
+  puntaje: number;
+  enunciado: string;
+  tipo: Tipo;
+  dificultad: string;
+}
+
+export interface ExamenDetalle extends Examen {
+  preguntas: ExamenPregunta[];
+}
+
+export interface Asignacion {
+  id: number;
+  estudiante: number;
+  estudiante_nombre: string;
+  estudiante_email: string;
+  fecha_asignacion: string;
+  estado: string;
+}
+
+export interface Estudiante {
+  id: number;
+  nombre: string;
+  email: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExamenesService {
   private readonly http = inject(HttpClient);
@@ -82,5 +111,31 @@ export class ExamenesService {
 
   cambiarEstado(id: number, accion: AccionEstado): Observable<{ id: number; estado: EstadoExamen }> {
     return this.http.post<{ id: number; estado: EstadoExamen }>(`${this.url}${id}/${accion}/`, {});
+  }
+
+  obtenerDetalle(id: number): Observable<ExamenDetalle> {
+    return this.http.get<ExamenDetalle>(`${this.url}${id}/`);
+  }
+
+  agregarPregunta(id: number, pregunta: number): Observable<ExamenPregunta> {
+    return this.http.post<ExamenPregunta>(`${this.url}${id}/agregar-pregunta/`, { pregunta });
+  }
+
+  quitarPregunta(id: number, pregunta: number): Observable<void> {
+    return this.http.post<void>(`${this.url}${id}/quitar-pregunta/`, { pregunta });
+  }
+
+  asignaciones(id: number): Observable<Asignacion[]> {
+    return this.http.get<Asignacion[]>(`${this.url}${id}/asignaciones/`);
+  }
+
+  asignar(id: number, estudiantes: number[]): Observable<unknown> {
+    return this.http.post<unknown>(`${this.url}${id}/asignar/`, { estudiantes });
+  }
+
+  estudiantes(page: number, search?: string): Observable<Pagina<Estudiante>> {
+    let params = new HttpParams().set('page', page);
+    if (search) params = params.set('search', search);
+    return this.http.get<Pagina<Estudiante>>(`${environment.apiUrl}/estudiantes/`, { params });
   }
 }

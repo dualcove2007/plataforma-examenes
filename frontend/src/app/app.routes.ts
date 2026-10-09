@@ -113,6 +113,12 @@ export const routes: Routes = [
         canActivate: [permisoGuard('examenes.gestionar')],
         loadComponent: () => import('./features/exams/examen-form').then((m) => m.ExamenForm),
       },
+      {
+        path: 'examenes/:id',
+        canActivate: [permisoGuard('examenes.gestionar')],
+        loadComponent: () =>
+          import('./features/exams/examen-detalle').then((m) => m.ExamenDetalle),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

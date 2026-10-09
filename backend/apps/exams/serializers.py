@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from apps.authentication.models import Usuario
 from apps.question_banks.models import Pregunta
 from apps.question_banks.serializers import OpcionSerializer
 
@@ -110,3 +110,9 @@ class MiExamenSerializer(serializers.ModelSerializer):
             "duracion_minutos", "intentos_permitidos", "examen_estado",
             "estado", "total_preguntas",
         ]
+        
+
+class EstudianteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = ["id", "nombre", "email"]
