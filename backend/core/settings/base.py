@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.files",
     "apps.notifications",
     "apps.question_banks",
+    "apps.reports",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -142,3 +143,6 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 300.0,  # cada 5 minutos
     },
 }
+
+# --- Reportes ---
+NOTA_APROBATORIA = 3.0
