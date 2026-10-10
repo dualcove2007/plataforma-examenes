@@ -24,6 +24,11 @@ export class Login {
 
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
+  readonly verPassword = signal(false);
+
+  alternarPassword(): void {
+    this.verPassword.update((v) => !v);
+  }
 
   invalido(campo: 'email' | 'password'): boolean {
     const control = this.form.controls[campo];
