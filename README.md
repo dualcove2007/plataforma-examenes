@@ -191,8 +191,15 @@ frontend/
   src/app/
     core/            sesión, interceptor, guards, utilidades
     features/        pantallas por módulo
-docs/              diagrama entidad-relación
+docs/   mockups, diagrama ER y normalización
 ```
+
+## Documentación
+
+- [Mockups de las interfaces](docs/mockups.pdf)
+- [Diagrama entidad-relación](docs/diagrama-er.png)
+- [Normalización (1FN, 2FN, 3FN)](docs/normalizacion.pdf)
+
 
 ## Configuración por entorno
 
