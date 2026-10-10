@@ -7,6 +7,10 @@ from apps.question_banks.models import OpcionRespuesta
 from .models import Intento, RespuestaIntento, ResultadoExamen
 from .services import segundos_restantes
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
+
+from .models import EventoIntento, Intento, RespuestaIntento, ResultadoExamen
 
 class IniciarSerializer(serializers.Serializer):
     asignacion = serializers.IntegerField()
@@ -21,6 +25,11 @@ class ResponderSerializer(serializers.Serializer):
         required=False, allow_blank=True, default="", max_length=5000
     )
 
+class EventoSerializer(serializers.Serializer):
+    tipo = serializers.ChoiceField(choices=EventoIntento.Tipo.choices)
+    duracion_segundos = serializers.IntegerField(
+        required=False, allow_null=True, min_value=0, max_value=86400
+    )
 
 class CalificacionSerializer(serializers.Serializer):
     respuesta = serializers.IntegerField()
@@ -163,11 +172,26 @@ class RespuestaDetalleSerializer(serializers.ModelSerializer):
 
 class ResultadoDetalleSerializer(ResultadoSerializer):
     respuestas = serializers.SerializerMethodField()
+    alertas = serializers.SerializerMethodField()
 
     class Meta(ResultadoSerializer.Meta):
-        fields = ResultadoSerializer.Meta.fields + ["respuestas"]
+        fields = ResultadoSerializer.Meta.fields + ["respuestas", "alertas"]
         read_only_fields = fields
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_alertas(self, obj):
+        """Resumen anti-trampa. Solo lo ve el docente: el estudiante nunca recibe esto."""
+        eventos = list(obj.intento.eventos.all())
+        salidas = [e for e in eventos if e.tipo == EventoIntento.Tipo.SALIDA_PESTANA]
+        return {
+            "salidas_pestana": len(salidas),
+            "segundos_fuera": sum(e.duracion_segundos or 0 for e in salidas),
+            "pegados": sum(1 for e in eventos if e.tipo == EventoIntento.Tipo.PEGADO),
+            "eventos": [
+                {"tipo": e.tipo, "fecha": e.fecha, "duracion_segundos": e.duracion_segundos}
+                for e in eventos
+            ],
+        }
     @extend_schema_field(RespuestaDetalleSerializer(many=True))
     def get_respuestas(self, obj):
         respuestas = (

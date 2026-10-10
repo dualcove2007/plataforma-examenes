@@ -14,6 +14,7 @@ from .filters import ResultadoFilter
 from .models import Intento, ResultadoExamen
 from .serializers import (
     CalificarSerializer,
+    EventoSerializer,
     IniciarSerializer,
     IntentoDetalleSerializer,
     IntentoSerializer,
@@ -71,6 +72,16 @@ class IntentoViewSet(
         return Response(
             {"guardada": True, "segundos_restantes": services.segundos_restantes(intento)}
         )
+
+    @extend_schema(request=EventoSerializer, responses={201: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"])
+    def eventos(self, request, pk=None):
+        """Anti-trampa: el navegador avisa cuando el estudiante sale de la pestaña o pega texto."""
+        intento = self.get_object()
+        serializer = EventoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.registrar_evento(intento, **serializer.validated_data)
+        return Response({"registrado": True}, status=status.HTTP_201_CREATED)
 
     @extend_schema(request=None, responses={200: ResultadoSerializer})
     @action(detail=True, methods=["post"])

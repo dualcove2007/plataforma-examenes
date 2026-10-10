@@ -102,3 +102,23 @@ class ResultadoExamen(models.Model):
 
     class Meta:
         db_table = "resultados_examen"
+        
+
+
+class EventoIntento(models.Model):
+    """Señales de posible trampa registradas por el navegador durante un intento."""
+
+    class Tipo(models.TextChoices):
+        SALIDA_PESTANA = "salida_pestana", "Salió de la pestaña"
+        PEGADO = "pegado", "Pegó texto"
+
+    intento = models.ForeignKey(
+        Intento, on_delete=models.CASCADE, related_name="eventos"
+    )
+    tipo = models.CharField(max_length=20, choices=Tipo.choices)
+    fecha = models.DateTimeField(default=timezone.now)
+    duracion_segundos = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = "eventos_intento"
+        ordering = ["fecha", "id"]

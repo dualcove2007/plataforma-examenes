@@ -8,10 +8,11 @@ from apps.exams.models import AsignacionExamen, Examen
 from apps.question_banks.models import Pregunta
 from apps.audit.services import registrar, registrar_transicion
 from apps.notifications.services import notificar_resultado_revisado
-from .models import Intento, RespuestaIntento, RespuestaOpcion, ResultadoExamen
+from .models import EventoIntento, Intento, RespuestaIntento, RespuestaOpcion, ResultadoExamen
 
 NOTA_MAXIMA = 5.0  # escala de la nota: 0 a 5.0
 GRACIA_SEGUNDOS = 5  # tolerancia por latencia de red
+MAX_EVENTOS = 200  # tope por intento, para que no se pueda inundar la tabla
 
 E = Intento.Estado
 T = Pregunta.Tipo
@@ -301,3 +302,16 @@ def calificar_abiertas(resultado, calificaciones, docente):
         docente,
     )
     return _recalcular(intento, docente)
+
+
+
+def registrar_evento(intento, tipo, duracion_segundos=None):
+    """Guarda una señal anti-trampa. Solo mientras el intento está en progreso."""
+    refrescar_estado(intento)
+    if intento.estado != E.EN_PROGRESO:
+        raise ValidationError("El intento ya no está en progreso.")
+    if intento.eventos.count() >= MAX_EVENTOS:
+        return None
+    return EventoIntento.objects.create(
+        intento=intento, tipo=tipo, duracion_segundos=duracion_segundos
+    )
