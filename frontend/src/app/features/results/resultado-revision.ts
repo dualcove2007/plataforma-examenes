@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -5,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { mensajeError } from '../../core/utils/api-error';
 import {
   Calificacion,
+  ETIQUETA_EVENTO,
   ETIQUETA_REVISION,
   ResultadoDetalle,
   ResultadosService,
@@ -12,7 +14,7 @@ import {
 
 @Component({
   selector: 'app-resultado-revision',
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   template: `
     <p><a routerLink="/resultados">← Volver a resultados</a></p>
 
@@ -30,6 +32,38 @@ import {
         Revisión: <strong>{{ etiqueta[r.estado_revision] }}</strong> · Puntaje
         {{ r.puntaje_total ?? 0 }} / {{ r.puntaje_maximo }} · Nota {{ r.nota_final ?? '—' }}
       </p>
+
+      <section aria-label="Alertas del intento">
+        <h3>Alertas del intento</h3>
+        @if (r.alertas.eventos.length === 0) {
+          <p>Sin alertas: el estudiante no salió de la pestaña ni pegó texto.</p>
+        } @else {
+          <p>
+            Salidas de la pestaña: <strong>{{ r.alertas.salidas_pestana }}</strong>
+            ({{ r.alertas.segundos_fuera }} s fuera en total) · Veces que pegó texto:
+            <strong>{{ r.alertas.pegados }}</strong>
+          </p>
+          <p>
+            <small>
+              Son señales automáticas, no una prueba de trampa: una notificación o un cambio de
+              ventana accidental también aparecen aquí.
+            </small>
+          </p>
+          <details>
+            <summary>Ver detalle</summary>
+            <ul>
+              @for (e of r.alertas.eventos; track $index) {
+                <li>
+                  {{ e.fecha | date: 'dd/MM/yyyy HH:mm:ss' }} — {{ etiquetaEvento[e.tipo] }}
+                  @if (e.duracion_segundos !== null) {
+                    ({{ e.duracion_segundos }} s)
+                  }
+                </li>
+              }
+            </ul>
+          </details>
+        }
+      </section>
 
       <table>
         <thead>
@@ -88,6 +122,7 @@ export class ResultadoRevision {
   private readonly id = Number(this.route.snapshot.paramMap.get('id'));
 
   protected readonly etiqueta = ETIQUETA_REVISION;
+    protected readonly etiquetaEvento = ETIQUETA_EVENTO;
   protected readonly resultado = signal<ResultadoDetalle | null>(null);
   protected readonly notas = signal<Record<number, string>>({});
   protected readonly guardando = signal(false);

@@ -47,8 +47,27 @@ export interface RespuestaResultado {
   es_correcta: boolean | null;
 }
 
+export interface EventoAlerta {
+  tipo: 'salida_pestana' | 'pegado';
+  fecha: string;
+  duracion_segundos: number | null;
+}
+
+export interface Alertas {
+  salidas_pestana: number;
+  segundos_fuera: number;
+  pegados: number;
+  eventos: EventoAlerta[];
+}
+
+export const ETIQUETA_EVENTO: Record<EventoAlerta['tipo'], string> = {
+  salida_pestana: 'Salió de la pestaña',
+  pegado: 'Pegó texto',
+};
+
 export interface ResultadoDetalle extends Resultado {
   respuestas: RespuestaResultado[];
+  alertas: Alertas;
 }
 
 export interface Calificacion {

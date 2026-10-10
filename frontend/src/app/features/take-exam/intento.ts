@@ -11,6 +11,7 @@ import {
   PreguntaIntento,
   ResultadoIntento,
 } from './intentos.service';
+import { VigilanciaIntento } from './vigilancia.service';
 
 interface RespuestaLocal {
   opciones: number[];
@@ -22,6 +23,7 @@ const dos = (n: number) => String(n).padStart(2, '0');
 @Component({
   selector: 'app-intento',
   imports: [RouterLink, Adjuntos],
+  providers: [VigilanciaIntento],
   template: `
     @if (error()) {
       <p role="alert">{{ error() }}</p>
@@ -47,6 +49,10 @@ const dos = (n: number) => String(n).padStart(2, '0');
         <p>
           Tiempo restante: <strong>{{ tiempo() }}</strong> · Respondidas
           {{ respondidas() }} de {{ i.preguntas.length }}
+        </p>
+        <p role="note">
+          <strong>Aviso:</strong> durante el examen se registra si sales de esta pestaña o pegas
+          texto. Tu docente podrá verlo al revisar el resultado.
         </p>
         <app-adjuntos tipo="examen" [objetoId]="i.examen" [soloLectura]="true" />
 
@@ -106,6 +112,7 @@ export class IntentoExamen {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(IntentosService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly vigilancia = inject(VigilanciaIntento);
 
   private readonly id = Number(this.route.snapshot.paramMap.get('id'));
 
@@ -134,7 +141,10 @@ export class IntentoExamen {
   private reloj?: ReturnType<typeof setInterval>;
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.detenerReloj());
+    this.destroyRef.onDestroy(() => {
+      this.detenerReloj();
+      this.vigilancia.detener();
+    });
 
     this.api.obtener(this.id).subscribe({
       next: (i) => {
@@ -153,6 +163,7 @@ export class IntentoExamen {
           this.respuestas.set(mapa);
           this.restantes.set(i.segundos_restantes);
           this.iniciarReloj();
+          this.vigilancia.iniciar(this.id);
         }
       },
       error: (err) => {
@@ -228,6 +239,7 @@ export class IntentoExamen {
     this.enviando.set(true);
     this.error.set('');
     this.detenerReloj();
+    this.vigilancia.detener();
 
     // Las respuestas abiertas se guardan al salir del cuadro; aquí se asegura la última.
     const abiertas = (this.intento()?.preguntas ?? []).filter(
@@ -249,7 +261,10 @@ export class IntentoExamen {
       error: (err) => {
         this.error.set(mensajeError(err));
         this.enviando.set(false);
-        if (this.restantes() > 0) this.iniciarReloj();
+        if (this.restantes() > 0) {
+          this.iniciarReloj();
+          this.vigilancia.iniciar(this.id);
+        }
       },
     });
   }

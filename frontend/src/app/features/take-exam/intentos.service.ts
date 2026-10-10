@@ -43,6 +43,7 @@ export interface ResultadoIntento {
   estado_revision: 'pendiente' | 'en_revision' | 'revisado';
 }
 
+export type TipoEvento = 'salida_pestana' | 'pegado';
 export interface CuerpoRespuesta {
   pregunta: number;
   opciones: number[];
@@ -73,6 +74,17 @@ export class IntentosService {
     );
   }
 
+  /** Anti-trampa: avisa que el estudiante salió de la pestaña o pegó texto. */
+  registrarEvento(
+    id: number,
+    tipo: TipoEvento,
+    duracionSegundos?: number,
+  ): Observable<{ registrado: boolean }> {
+    const cuerpo: { tipo: TipoEvento; duracion_segundos?: number } = { tipo };
+    if (duracionSegundos !== undefined) cuerpo.duracion_segundos = duracionSegundos;
+    return this.http.post<{ registrado: boolean }>(`${this.url}${id}/eventos/`, cuerpo);
+  }
+  
   enviar(id: number): Observable<ResultadoIntento> {
     return this.http.post<ResultadoIntento>(`${this.url}${id}/enviar/`, {});
   }
