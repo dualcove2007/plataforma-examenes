@@ -60,6 +60,11 @@ export class MainLayout {
         texto: 'Mis resultados',
         visible: this.auth.tienePermiso('resultados.ver_propios'),
       },
+      {
+        ruta: '/auditoria',
+        texto: 'Auditoría',
+        visible: this.auth.tienePermiso('auditoria.ver'),
+      },
     ].filter((e) => e.visible),
   );
 

@@ -160,6 +160,11 @@ export const routes: Routes = [
           import('./features/results/mi-resultado').then((m) => m.MiResultado),
       },
       {
+        path: 'auditoria',
+        canActivate: [permisoGuard('auditoria.ver')],
+        loadComponent: () => import('./features/audit/auditoria').then((m) => m.Auditoria),
+      },
+      {
         path: 'notificaciones',
         loadComponent: () =>
           import('./features/notifications/notificaciones').then((m) => m.Notificaciones),
