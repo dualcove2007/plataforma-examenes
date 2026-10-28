@@ -46,7 +46,7 @@ const dos = (n: number) => String(n).padStart(2, '0');
     } @else if (intento(); as i) {
       @if (i.estado === 'en_progreso' && i.preguntas) {
         <h2>{{ i.titulo }}</h2>
-        <p>
+        <p class="barra-examen" [class.urgente]="restantes() <= 300">
           Tiempo restante: <strong>{{ tiempo() }}</strong> · Respondidas
           {{ respondidas() }} de {{ i.preguntas.length }}
         </p>
@@ -98,7 +98,7 @@ const dos = (n: number) => String(n).padStart(2, '0');
         @if (estadoGuardado()) {
           <p role="status">{{ estadoGuardado() }}</p>
         }
-        <button type="button" [disabled]="enviando()" (click)="enviar()">
+        <button type="button" class="primario" [disabled]="enviando()" (click)="enviar()">
           {{ enviando() ? 'Enviando…' : 'Enviar examen' }}
         </button>
       } @else {
