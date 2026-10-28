@@ -6,7 +6,7 @@ x-backend: &backend
     POSTGRES_HOST: db
     POSTGRES_PORT: "5432"
     REDIS_URL: redis://redis:6379/0
-    ALLOWED_HOSTS: localhost,127.0.0.1
+    ALLOWED_HOSTS: localhost,127.0.0.1,10.0.2.2
     CORS_ALLOWED_ORIGINS: http://localhost:4200,http://localhost:8080
   depends_on:
     db:
