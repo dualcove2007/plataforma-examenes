@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/sesion.dart';
 import 'examen_page.dart';
 
 class MisExamenesPage extends StatefulWidget {
@@ -48,7 +49,16 @@ class _MisExamenesPageState extends State<MisExamenesPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Mis exámenes')),
+        appBar: AppBar(
+          title: const Text('Mis exámenes'),
+          actions: [
+            IconButton(
+              tooltip: 'Cerrar sesión',
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () => cerrarSesion(context, widget.api),
+            ),
+          ],
+        ),
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: futuro,
           builder: (context, snap) {
