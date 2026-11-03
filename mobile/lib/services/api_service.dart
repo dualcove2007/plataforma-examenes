@@ -130,6 +130,21 @@ class ApiService {
     'rol': 'Rol',
     'descripcion': 'Descripción',
     'permisos': 'Permisos',
+    'titulo': 'Título',
+    'materia': 'Materia',
+    'banco': 'Banco',
+    'enunciado': 'Enunciado',
+    'tipo': 'Tipo',
+    'dificultad': 'Dificultad',
+    'puntaje': 'Puntaje',
+    'opciones': 'Opciones',
+    'pregunta': 'Pregunta',
+    'estudiantes': 'Estudiantes',
+    'calificaciones': 'Calificaciones',
+    'fecha_inicio': 'Inicio',
+    'fecha_fin': 'Fin',
+    'duracion_minutos': 'Duración',
+    'intentos_permitidos': 'Intentos',
     'non_field_errors': 'Error',
   };
 
@@ -353,4 +368,156 @@ class ApiService {
 
   Future<Map<String, dynamic>> estadisticas() async =>
       _mapa(_ok(await _get('/reportes/estadisticas/')));
+
+  // ───────────────────────── Docente: bancos de preguntas ─────────────────────────
+
+  Future<Pagina> bancosPagina(
+    int pagina, {
+    String? buscar,
+    int? materia,
+    bool? activo,
+  }) => _pagina('/bancos/', pagina, {
+    'search': buscar,
+    'materia': materia?.toString(),
+    'activo': activo?.toString(),
+  });
+
+  Future<Map<String, dynamic>> crearBanco(Map<String, dynamic> datos) async =>
+      _mapa(_ok(await _post('/bancos/', datos)));
+
+  Future<Map<String, dynamic>> actualizarBanco(
+    int id,
+    Map<String, dynamic> datos,
+  ) async => _mapa(_ok(await _patch('/bancos/$id/', datos)));
+
+  /// Sin preguntas se borra; con preguntas solo se desactiva.
+  /// Devuelve el mensaje del servidor para mostrárselo al docente.
+  Future<String> eliminarBanco(int id) async =>
+      '${_mapa(_ok(await _delete('/bancos/$id/')))['mensaje']}';
+
+  // ───────────────────────── Docente: preguntas ─────────────────────────
+
+  Future<Pagina> preguntasPagina(
+    int pagina, {
+    String? buscar,
+    int? banco,
+    int? materia,
+    String? tipo,
+    bool? activo,
+  }) => _pagina('/preguntas/', pagina, {
+    'search': buscar,
+    'banco': banco?.toString(),
+    'materia': materia?.toString(),
+    'tipo': tipo,
+    'activo': activo?.toString(),
+  });
+
+  Future<Map<String, dynamic>> crearPregunta(
+    Map<String, dynamic> datos,
+  ) async => _mapa(_ok(await _post('/preguntas/', datos)));
+
+  Future<Map<String, dynamic>> actualizarPregunta(
+    int id,
+    Map<String, dynamic> datos,
+  ) async => _mapa(_ok(await _patch('/preguntas/$id/', datos)));
+
+  Future<String> eliminarPregunta(int id) async =>
+      '${_mapa(_ok(await _delete('/preguntas/$id/')))['mensaje']}';
+
+  // ───────────────────────── Docente: exámenes ─────────────────────────
+
+  Future<Pagina> examenesPagina(
+    int pagina, {
+    String? buscar,
+    String? estado,
+  }) => _pagina('/examenes/', pagina, {'search': buscar, 'estado': estado});
+
+  /// Detalle con `preguntas` (cada una con sus opciones y puntaje).
+  Future<Map<String, dynamic>> examen(int id) async =>
+      _mapa(_ok(await _get('/examenes/$id/')));
+
+  Future<Map<String, dynamic>> crearExamen(Map<String, dynamic> datos) async =>
+      _mapa(_ok(await _post('/examenes/', datos)));
+
+  Future<Map<String, dynamic>> actualizarExamen(
+    int id,
+    Map<String, dynamic> datos,
+  ) async => _mapa(_ok(await _patch('/examenes/$id/', datos)));
+
+  /// Solo se borran exámenes en borrador.
+  Future<void> eliminarExamen(int id) async {
+    _ok(await _delete('/examenes/$id/'));
+  }
+
+  /// [accion]: `publicar`, `cerrar` o `archivar`.
+  Future<void> cambiarEstadoExamen(int id, String accion) async {
+    _ok(await _post('/examenes/$id/$accion/'));
+  }
+
+  Future<void> agregarPreguntaExamen(
+    int examenId,
+    int preguntaId, {
+    double? puntaje,
+  }) async {
+    _ok(
+      await _post('/examenes/$examenId/agregar-pregunta/', {
+        'pregunta': preguntaId,
+        if (puntaje != null) 'puntaje': puntaje,
+      }),
+    );
+  }
+
+  Future<void> quitarPreguntaExamen(int examenId, int preguntaId) async {
+    _ok(
+      await _post('/examenes/$examenId/quitar-pregunta/', {
+        'pregunta': preguntaId,
+      }),
+    );
+  }
+
+  /// Devuelve cuántos estudiantes se asignaron de verdad (los repetidos no cuentan).
+  Future<int> asignarEstudiantes(int examenId, List<int> ids) async {
+    final r = _mapa(
+      _ok(await _post('/examenes/$examenId/asignar/', {'estudiantes': ids})),
+    );
+    return (r['asignados'] as int?) ?? 0;
+  }
+
+  Future<List<Map<String, dynamic>>> asignaciones(int examenId) async =>
+      List<Map<String, dynamic>>.from(
+        _json(_ok(await _get('/examenes/$examenId/asignaciones/'))),
+      );
+
+  /// Estudiantes activos, para asignarlos a un examen.
+  Future<Pagina> estudiantesPagina(int pagina, {String? buscar}) =>
+      _pagina('/estudiantes/', pagina, {'search': buscar});
+
+  // ───────────────────────── Docente: resultados y calificación ─────────────────────────
+
+  Future<Pagina> resultadosPagina(
+    int pagina, {
+    String? buscar,
+    int? examen,
+    String? revision,
+  }) => _pagina('/resultados/', pagina, {
+    'search': buscar,
+    'examen': examen?.toString(),
+    'estado_revision': revision,
+  });
+
+  /// Detalle con `respuestas` y `alertas` (anti-trampa).
+  Future<Map<String, dynamic>> resultado(int id) async =>
+      _mapa(_ok(await _get('/resultados/$id/')));
+
+  /// [calificaciones]: lista de `{respuesta: id, puntaje: n}` (solo abiertas).
+  Future<Map<String, dynamic>> calificar(
+    int resultadoId,
+    List<Map<String, dynamic>> calificaciones,
+  ) async => _mapa(
+    _ok(
+      await _post('/resultados/$resultadoId/calificar/', {
+        'calificaciones': calificaciones,
+      }),
+    ),
+  );
 }

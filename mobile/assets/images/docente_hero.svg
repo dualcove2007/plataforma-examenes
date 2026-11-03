@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 150" fill="none">
+  <circle cx="86" cy="76" r="62" fill="#D3ECFA"/>
+  <!-- hoja de examen -->
+  <rect x="42" y="22" width="84" height="104" rx="12" fill="#fff" stroke="#1F2A37" stroke-width="3.5"/>
+  <rect x="68" y="14" width="32" height="16" rx="6" fill="#FFC145" stroke="#1F2A37" stroke-width="3.5"/>
+  <!-- filas con check -->
+  <rect x="54" y="42" width="14" height="14" rx="4" fill="#D6EFE8" stroke="#1F2A37" stroke-width="3"/>
+  <path d="M57 49 l3 3 l6 -7" stroke="#1F7A6D" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="76" y="45" width="38" height="7" rx="3.5" fill="#1F2A37" opacity=".85"/>
+  <rect x="54" y="66" width="14" height="14" rx="4" fill="#D6EFE8" stroke="#1F2A37" stroke-width="3"/>
+  <path d="M57 73 l3 3 l6 -7" stroke="#1F7A6D" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="76" y="69" width="30" height="7" rx="3.5" fill="#1F2A37" opacity=".85"/>
+  <rect x="54" y="90" width="14" height="14" rx="4" fill="#fff" stroke="#1F2A37" stroke-width="3"/>
+  <rect x="76" y="93" width="34" height="7" rx="3.5" fill="#1F2A37" opacity=".35"/>
+  <!-- lápiz -->
+  <g transform="translate(112 96) rotate(40)">
+    <rect x="0" y="0" width="14" height="52" rx="4" fill="#FF6B5E" stroke="#1F2A37" stroke-width="3.5"/>
+    <path d="M0 52 L7 66 L14 52 Z" fill="#FFEBC2" stroke="#1F2A37" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M4.5 61 L7 66 L9.5 61 Z" fill="#1F2A37"/>
+  </g>
+  <!-- nota -->
+  <circle cx="34" cy="108" r="20" fill="#A78BFA" stroke="#1F2A37" stroke-width="3.5"/>
+  <path d="M25 108 l7 7 l12 -14" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- chispas -->
+  <circle cx="142" cy="34" r="5" fill="#FFC145" stroke="#1F2A37" stroke-width="2.5"/>
+  <circle cx="26" cy="46" r="4" fill="#FF6B5E" stroke="#1F2A37" stroke-width="2.5"/>
+</svg>

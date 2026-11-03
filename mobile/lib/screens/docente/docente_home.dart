@@ -1,45 +1,68 @@
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/sesion.dart';
-import '../../widgets/ui.dart';
+import 'bancos_page.dart';
+import 'docente_dashboard_page.dart';
+import 'examenes_page.dart';
+import 'resultados_page.dart';
 
-/// Panel del docente. PROVISIONAL: mientras se construye el panel completo
-/// (bancos de preguntas, exámenes, asignación y revisión) solo muestra un aviso
-/// y permite cerrar sesión, para que el docente no caiga en la vista de estudiante.
-class DocenteHome extends StatelessWidget {
+/// Contenedor del docente con navegación inferior.
+///
+/// Igual que en el estudiante, cada pestaña se vuelve a crear al visitarla
+/// para mostrar datos frescos (por ejemplo, los resultados que acaban de llegar).
+class DocenteHome extends StatefulWidget {
   final ApiService api;
   const DocenteHome({super.key, required this.api});
 
   @override
-  Widget build(BuildContext context) {
-    final nombre = '${api.usuario?['nombre'] ?? 'docente'}'.split(' ').first;
-    return Scaffold(
-      body: Column(
-        children: [
-          CabeceraSeccion(
-            titulo: 'Hola, $nombre',
-            subtitulo: 'Panel docente',
-            icono: Icons.cast_for_education_rounded,
-            seccion: Seccion.resultados,
-            acciones: [
-              IconButton(
-                tooltip: 'Cerrar sesión',
-                icon: const Icon(Icons.logout_rounded),
-                onPressed: () => cerrarSesion(context, api),
-              ),
-            ],
-          ),
-          const Expanded(
-            child: EstadoVacio(
-              titulo: 'Estamos preparando tu panel',
-              mensaje:
-                  'Muy pronto podrás crear exámenes, asignarlos y revisar respuestas desde aquí.',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<DocenteHome> createState() => _DocenteHomeState();
+}
+
+class _DocenteHomeState extends State<DocenteHome> {
+  int tab = 0;
+
+  Widget _pagina() => switch (tab) {
+    0 => DocenteDashboardPage(
+      key: const ValueKey('inicio'),
+      api: widget.api,
+      onIrA: (i) => setState(() => tab = i),
+    ),
+    1 => BancosPage(key: const ValueKey('bancos'), api: widget.api),
+    2 => DocenteExamenesPage(key: const ValueKey('examenes'), api: widget.api),
+    _ => DocenteResultadosPage(
+      key: const ValueKey('resultados'),
+      api: widget.api,
+    ),
+  };
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: _pagina(),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: tab,
+      onDestinationSelected: (i) => setState(() => tab = i),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Inicio',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.folder_copy_outlined),
+          selectedIcon: Icon(Icons.folder_copy_rounded),
+          label: 'Bancos',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.assignment_outlined),
+          selectedIcon: Icon(Icons.assignment_rounded),
+          label: 'Exámenes',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.fact_check_outlined),
+          selectedIcon: Icon(Icons.fact_check_rounded),
+          label: 'Resultados',
+        ),
+      ],
+    ),
+  );
 }
