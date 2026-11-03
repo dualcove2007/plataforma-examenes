@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 200" fill="none">
+  <circle cx="110" cy="102" r="84" fill="#E7DFFD"/>
+  <!-- hoja -->
+  <rect x="58" y="32" width="100" height="130" rx="12" fill="#FFF8EE" stroke="#1F2A37" stroke-width="3"/>
+  <rect x="74" y="52" width="68" height="10" rx="5" fill="#E7DFFD"/>
+  <rect x="74" y="74" width="52" height="10" rx="5" fill="#D6EFE8"/>
+  <rect x="74" y="96" width="60" height="10" rx="5" fill="#FFEBC2"/>
+  <rect x="74" y="118" width="40" height="10" rx="5" fill="#D3ECFA"/>
+  <!-- reloj -->
+  <g transform="translate(160 48)">
+    <circle cx="-14" cy="-20" r="7" fill="#FFC145" stroke="#1F2A37" stroke-width="3"/>
+    <circle cx="14" cy="-20" r="7" fill="#FFC145" stroke="#1F2A37" stroke-width="3"/>
+    <circle cx="0" cy="0" r="22" fill="#FF6B5E" stroke="#1F2A37" stroke-width="3"/>
+    <circle cx="0" cy="0" r="14" fill="#fff" stroke="#1F2A37" stroke-width="2.5"/>
+    <path d="M0 0 V-9 M0 0 L7 4" stroke="#1F2A37" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- lupa -->
+  <circle cx="138" cy="122" r="26" fill="#D3ECFA" stroke="#1F2A37" stroke-width="4"/>
+  <path d="M157 141 L180 165" stroke="#1F2A37" stroke-width="11" stroke-linecap="round"/>
+  <path d="M157 141 L180 165" stroke="#FFC145" stroke-width="4" stroke-linecap="round"/>
+  <path d="M126 114 Q130 106 140 105" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M30 92 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#A78BFA"/>
+  <path d="M184 112 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#fff"/>
+</svg>

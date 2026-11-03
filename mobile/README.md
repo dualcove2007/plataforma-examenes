@@ -13,7 +13,29 @@ App para Android/iOS que consume la API Django del proyecto.
   - **Materias**: crear, editar y eliminar.
   - **Roles**: editar descripción y encender/apagar permisos.
   - **Auditoría**: movimientos con búsqueda, filtros y detalle.
-- **Estudiante**: mis exámenes, presentar examen, resultados, materias.
+- **Estudiante** (navegación inferior):
+  - **Inicio**: saludo, exámenes por presentar, promedio, siguiente examen y últimos
+    resultados. La campana abre las notificaciones.
+  - **Exámenes**: lista con filtros (por presentar, completados, cerrados) y estado de
+    cada uno (disponible, en curso, próximo, cerrado, completado). Al tocar uno se abre
+    una hoja con duración, preguntas, intentos y reglas, y recién ahí se empieza.
+  - **Presentar examen**: una pregunta por pantalla, cronómetro siempre visible,
+    navegador numerado, guardado automático y envío con confirmación. Si el tiempo
+    se acaba, se envía solo. El tiempo se calcula contra la hora límite, así que no
+    se desfasa si la app queda en segundo plano.
+  - **Resultado**: nota, aprobado/reprobado o «en revisión». Cuando el docente ya
+    revisó y el examen cerró, muestra el detalle pregunta por pregunta.
+  - **Resultados**: historial de notas. **Materias**: catálogo con búsqueda.
+  - **Perfil**: datos de la cuenta, notificaciones y cerrar sesión.
+- **Docente**: por ahora solo una pantalla provisional con cierre de sesión (el panel
+  completo es el siguiente avance).
+
+### Vigilancia durante el examen
+
+Igual que la web, la app avisa al backend (`POST /intentos/<id>/eventos/`, tipo
+`salida_pestana`) cuando el estudiante saca la app del primer plano durante un examen,
+y el docente lo ve en el resultado. La hoja previa al examen se lo informa al estudiante.
+La app no registra pegado de texto (`pegado`), que la web sí reporta.
 
 ## Estilo
 
@@ -42,8 +64,13 @@ Usuarios de prueba (`python manage.py seed`): `admin@demo.com`,
 ```
 lib/
   theme/       paleta y tema
-  widgets/     componentes compartidos (tarjetas, cabeceras, lista paginada...)
+  widgets/     componentes compartidos
+                 ui.dart             tarjetas, cabeceras, lista paginada...
+                 estudiante_ui.dart  estado de un examen, nota, tarjeta de examen
   services/    ApiService (JWT con renovación automática)
   screens/
-    admin/     panel del administrador
+    admin/         panel del administrador
+    estudiante/    panel del estudiante
+    docente/       panel del docente (provisional)
+    notificaciones_page.dart   compartida por todos los roles
 ```

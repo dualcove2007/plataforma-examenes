@@ -6,7 +6,8 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 import 'admin/admin_home.dart';
-import 'home_page.dart';
+import 'docente/docente_home.dart';
+import 'estudiante/estudiante_home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -41,8 +42,12 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await api.login(email.text.trim(), pass.text);
       if (!mounted) return;
-      // El administrador tiene su propio panel; el resto va a la vista de exámenes.
-      final destino = api.esAdmin ? AdminHome(api: api) : HomePage(api: api);
+      // Cada rol entra a su propio panel.
+      final Widget destino = api.esAdmin
+          ? AdminHome(api: api)
+          : api.esDocente
+          ? DocenteHome(api: api)
+          : EstudianteHome(api: api);
       Navigator.of(context)
           .pushReplacement(MaterialPageRoute(builder: (_) => destino));
     } catch (e) {

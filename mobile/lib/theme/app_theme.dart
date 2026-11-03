@@ -45,6 +45,16 @@ class Seccion {
     Color(0xFFFF8A7F),
     Paleta.tinta,
   );
+
+  // Secciones del estudiante (y del docente): cada pestaña con su color.
+  static const examenes = Seccion(Paleta.miel, Color(0xFFFFD375), Paleta.tinta);
+  static const resultados = Seccion(
+    Paleta.cielo,
+    Color(0xFF82CCF0),
+    Paleta.tinta,
+  );
+  static const catalogo = Seccion(Paleta.lila, Color(0xFFBDA6FB), Paleta.tinta);
+  static const perfil = Seccion(Paleta.coral, Color(0xFFFF8A7F), Paleta.tinta);
 }
 
 /// Ícono y color que identifican a cada rol en toda la app.

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 200" fill="none">
+  <circle cx="110" cy="102" r="84" fill="#D3ECFA"/>
+  <!-- sol -->
+  <g transform="translate(170 50)">
+    <circle cx="0" cy="0" r="15" fill="#FFC145" stroke="#1F2A37" stroke-width="3"/>
+    <path d="M0 -26 V-21 M0 21 V26 M-26 0 H-21 M21 0 H26 M-18 -18 L-14 -14 M18 18 L14 14 M18 -18 L14 -14 M-18 18 L-14 14" stroke="#1F2A37" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- nubes -->
+  <path d="M34 62 Q34 50 46 50 Q50 40 62 42 Q74 40 76 52 Q86 52 86 62 Z" fill="#fff" stroke="#1F2A37" stroke-width="3" stroke-linejoin="round"/>
+  <!-- planta -->
+  <path d="M110 118 V78" stroke="#1F2A37" stroke-width="9" stroke-linecap="round"/>
+  <path d="M110 118 V78" stroke="#1F7A6D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M110 100 Q80 100 72 72 Q104 68 110 100 Z" fill="#2E9384" stroke="#1F2A37" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M110 84 Q140 84 148 56 Q116 52 110 84 Z" fill="#1F7A6D" stroke="#1F2A37" stroke-width="3" stroke-linejoin="round"/>
+  <!-- maceta -->
+  <path d="M74 132 H146 L139 172 Q138 178 132 178 H88 Q82 178 81 172 Z" fill="#FF6B5E" stroke="#1F2A37" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="66" y="118" width="88" height="16" rx="6" fill="#FF8A7F" stroke="#1F2A37" stroke-width="3"/>
+  <rect x="92" y="144" width="36" height="8" rx="4" fill="#FFDAD5"/>
+  <path d="M36 134 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#fff"/>
+  <path d="M176 128 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#FFC145"/>
+</svg>

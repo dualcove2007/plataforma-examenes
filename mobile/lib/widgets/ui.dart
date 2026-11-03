@@ -208,6 +208,9 @@ class CabeceraSeccion extends StatelessWidget {
   final IconData icono;
   final Seccion seccion;
   final List<Widget> acciones;
+
+  /// Botón al inicio de la cabecera (por ejemplo "volver" en pantallas que se abren encima).
+  final Widget? leading;
   const CabeceraSeccion({
     super.key,
     required this.titulo,
@@ -215,6 +218,7 @@ class CabeceraSeccion extends StatelessWidget {
     required this.icono,
     required this.seccion,
     this.acciones = const [],
+    this.leading,
   });
 
   @override
@@ -255,6 +259,7 @@ class CabeceraSeccion extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 16, 10, 24),
                 child: Row(
                   children: [
+                    if (leading != null) ...[leading!, const SizedBox(width: 4)],
                     IconBadge(icono, fondo: Colors.white, tam: 52),
                     const SizedBox(width: 14),
                     Expanded(

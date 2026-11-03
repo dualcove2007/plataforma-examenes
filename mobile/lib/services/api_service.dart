@@ -20,6 +20,8 @@ class ApiService {
   Map<String, dynamic>? usuario;
 
   bool get esAdmin => usuario?['rol'] == 'Administrador';
+  bool get esDocente => usuario?['rol'] == 'Docente';
+  bool get esEstudiante => usuario?['rol'] == 'Estudiante';
 
   bool tienePermiso(String codigo) =>
       ((usuario?['permisos'] as List?) ?? const []).contains(codigo);
@@ -188,6 +190,46 @@ class ApiService {
   Future<List<Map<String, dynamic>>> misExamenes() => _lista('/mis-examenes/');
   Future<List<Map<String, dynamic>>> intentos() => _lista('/intentos/');
 
+  /// Mis exámenes + cuántos intentos llevo (`usados`) y si tengo uno abierto
+  /// con tiempo (`en_curso`). Los intentos anulados no cuentan.
+  Future<List<Map<String, dynamic>>> examenesConIntentos() async {
+    final res = await Future.wait([misExamenes(), intentos()]);
+    final examenes = res[0];
+    final intentosAll = res[1];
+    return [
+      for (final e in examenes)
+        {
+          ...e,
+          'usados': intentosAll
+              .where(
+                (i) => i['asignacion'] == e['id'] && i['estado'] != 'anulado',
+              )
+              .length,
+          'en_curso': intentosAll.any(
+            (i) =>
+                i['asignacion'] == e['id'] &&
+                i['estado'] == 'en_progreso' &&
+                ((i['segundos_restantes'] as int?) ?? 0) > 0,
+          ),
+        },
+    ];
+  }
+
+  /// Anti-trampa (igual que la web): avisa cuando el estudiante sale del examen.
+  /// Es "de mejor esfuerzo": si falla la red no interrumpe el examen.
+  Future<void> registrarEvento(
+    int intentoId,
+    String tipo, {
+    int? duracionSegundos,
+  }) async {
+    try {
+      await _post('/intentos/$intentoId/eventos/', {
+        'tipo': tipo,
+        if (duracionSegundos != null) 'duracion_segundos': duracionSegundos,
+      });
+    } catch (_) {}
+  }
+
   Future<Map<String, dynamic>> iniciarIntento(int asignacionId) async {
     final r = await _post('/intentos/', {'asignacion': asignacionId});
     if (r.statusCode != 200 && r.statusCode != 201) {
@@ -216,6 +258,33 @@ class ApiService {
     final r = await _post('/intentos/$intentoId/enviar/');
     if (r.statusCode != 200) throw Exception(_mensaje(r));
     return _mapa(r);
+  }
+
+  /// Resultados del estudiante (la nota llega null mientras no esté revisada).
+  Future<Pagina> misResultados(int pagina) =>
+      _pagina('/mis-resultados/', pagina);
+
+  Future<List<Map<String, dynamic>>> misResultadosTodos() =>
+      _lista('/mis-resultados/');
+
+  /// Detalle: incluye `respuestas` solo si el examen ya cerró y fue revisado.
+  Future<Map<String, dynamic>> miResultado(int id) async =>
+      _mapa(_ok(await _get('/mis-resultados/$id/')));
+
+  // ───────────────────────── Notificaciones (cualquier rol) ─────────────────────────
+
+  Future<Pagina> notificaciones(int pagina, {bool? leida}) =>
+      _pagina('/notificaciones/', pagina, {'leida': leida?.toString()});
+
+  Future<int> noLeidas() async =>
+      _mapa(_ok(await _get('/notificaciones/no-leidas/')))['no_leidas'] as int;
+
+  Future<void> marcarLeida(int id) async {
+    _ok(await _post('/notificaciones/$id/marcar-leida/'));
+  }
+
+  Future<void> marcarTodasLeidas() async {
+    _ok(await _post('/notificaciones/marcar-todas/'));
   }
 
   // ───────────────────────── Administrador: usuarios ─────────────────────────

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 200" fill="none">
+  <circle cx="110" cy="102" r="84" fill="#D6EFE8"/>
+  <!-- confeti -->
+  <rect x="34" y="52" width="12" height="12" rx="3" fill="#FF6B5E" transform="rotate(20 40 58)"/>
+  <rect x="176" y="40" width="12" height="12" rx="3" fill="#5BB8E8" transform="rotate(-18 182 46)"/>
+  <rect x="186" y="104" width="10" height="10" rx="3" fill="#A78BFA" transform="rotate(30 191 109)"/>
+  <rect x="22" y="112" width="10" height="10" rx="3" fill="#FFC145" transform="rotate(-25 27 117)"/>
+  <circle cx="62" cy="28" r="6" fill="#FFC145"/>
+  <circle cx="160" cy="24" r="5" fill="#FF6B5E"/>
+  <circle cx="196" cy="150" r="6" fill="#1F7A6D"/>
+  <circle cx="30" cy="160" r="5" fill="#A78BFA"/>
+  <path d="M178 70 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#FFC145"/>
+  <path d="M40 84 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#fff"/>
+  <!-- trofeo -->
+  <path d="M70 52 H52 Q44 52 44 62 Q44 86 70 92" stroke="#1F2A37" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M150 52 H168 Q176 52 176 62 Q176 86 150 92" stroke="#1F2A37" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M70 40 H150 V90 Q150 128 110 134 Q70 128 70 90 Z" fill="#FFC145" stroke="#1F2A37" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="102" y="134" width="16" height="22" fill="#FFC145" stroke="#1F2A37" stroke-width="3"/>
+  <rect x="80" y="156" width="60" height="16" rx="5" fill="#1F7A6D" stroke="#1F2A37" stroke-width="3"/>
+  <path d="M110 62 L114.7 73.5 L127.1 74.4 L117.6 82.5 L120.6 94.6 L110 88 L99.4 94.6 L102.4 82.5 L92.9 74.4 L105.3 73.5 Z" fill="#fff" stroke="#1F2A37" stroke-width="2.5" stroke-linejoin="round"/>
+</svg>
