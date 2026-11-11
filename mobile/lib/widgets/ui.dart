@@ -465,8 +465,89 @@ class FilaFiltros<T> extends StatelessWidget {
 
 // ───────────────────────── Lista paginada ─────────────────────────
 
-/// Lista con scroll infinito, pull-to-refresh y manejo de carga/vacío/error.
-/// Si cambia [filtro] se recarga desde la página 1.
+/// Registros por página en todas las listas (coincide con el PAGE_SIZE del backend).
+const tamanoPagina = 10;
+
+int totalPaginasDe(int total) =>
+    total <= 0 ? 1 : (total + tamanoPagina - 1) ~/ tamanoPagina;
+
+/// Barra "‹ Página 2 de 5 ›" con el rango de registros que se está viendo.
+/// No se dibuja si todo cabe en una sola página.
+class PaginadorBarra extends StatelessWidget {
+  final int pagina;
+  final int totalPaginas;
+  final int total;
+  final bool cargando;
+  final String? error;
+  final ValueChanged<int> onIr;
+  final VoidCallback? onReintentar;
+  const PaginadorBarra({
+    super.key,
+    required this.pagina,
+    required this.totalPaginas,
+    required this.total,
+    required this.onIr,
+    this.cargando = false,
+    this.error,
+    this.onReintentar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (totalPaginas <= 1 && error == null) return const SizedBox(height: 4);
+    final desde = (pagina - 1) * tamanoPagina + 1;
+    final hasta = pagina * tamanoPagina < total ? pagina * tamanoPagina : total;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton.filledTonal(
+                tooltip: 'Página anterior',
+                onPressed: pagina > 1 && !cargando
+                    ? () => onIr(pagina - 1)
+                    : null,
+                icon: const Icon(Icons.chevron_left_rounded),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Text(
+                  'Página $pagina de $totalPaginas',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              IconButton.filledTonal(
+                tooltip: 'Página siguiente',
+                onPressed: pagina < totalPaginas && !cargando
+                    ? () => onIr(pagina + 1)
+                    : null,
+                icon: const Icon(Icons.chevron_right_rounded),
+              ),
+            ],
+          ),
+          if (total > 0)
+            Text(
+              'Mostrando $desde–$hasta de $total',
+              style: const TextStyle(color: Paleta.tintaSuave, fontSize: 12.5),
+            ),
+          if (error != null)
+            TextButton.icon(
+              onPressed: onReintentar,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text('$error  ·  Reintentar'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lista de [tamanoPagina] registros por página, con botones para pasar de
+/// página, pull-to-refresh y manejo de carga/vacío/error.
+/// Si cambia [filtro] vuelve a la página 1; [ListaPaginadaState.recargar]
+/// refresca la página actual.
 class ListaPaginada extends StatefulWidget {
   final Future<Pagina> Function(int pagina) cargar;
   final Widget Function(BuildContext, Map<String, dynamic>) itemBuilder;
@@ -488,26 +569,29 @@ class ListaPaginada extends StatefulWidget {
 
 class ListaPaginadaState extends State<ListaPaginada> {
   final _scroll = ScrollController();
-  final _items = <Map<String, dynamic>>[];
-  int _pagina = 0;
+  List<Map<String, dynamic>> _items = [];
+  int _pagina = 1;
+  int _pedida = 1; // página que se está pidiendo (para reintentar)
+  int _total = 0;
   int _gen = 0; // descarta respuestas de cargas anteriores
-  bool _hayMas = true;
   bool _cargando = false;
+  bool _primera = true; // todavía no llegó ninguna página
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _scroll.addListener(() {
-      if (_scroll.position.extentAfter < 300) _siguiente();
-    });
-    _siguiente();
+    _ir(1);
   }
 
   @override
   void didUpdateWidget(covariant ListaPaginada old) {
     super.didUpdateWidget(old);
-    if (old.filtro != widget.filtro) recargar();
+    if (old.filtro != widget.filtro) {
+      _items = [];
+      _primera = true;
+      _ir(1);
+    }
   }
 
   @override
@@ -516,32 +600,32 @@ class ListaPaginadaState extends State<ListaPaginada> {
     super.dispose();
   }
 
-  Future<void> recargar() {
-    _gen++;
-    _items.clear();
-    _pagina = 0;
-    _hayMas = true;
-    _cargando = false;
-    _error = null;
-    if (mounted) setState(() {});
-    return _siguiente();
-  }
+  /// Vuelve a pedir la página que se está viendo.
+  Future<void> recargar() => _ir(_pagina);
 
-  Future<void> _siguiente() async {
-    if (_cargando || !_hayMas) return;
-    final gen = _gen;
+  Future<void> _ir(int pagina) async {
+    final gen = ++_gen;
+    _pedida = pagina;
     setState(() {
       _cargando = true;
       _error = null;
     });
     try {
-      final p = await widget.cargar(_pagina + 1);
+      final p = await widget.cargar(pagina);
       if (!mounted || gen != _gen) return;
       setState(() {
-        _items.addAll(p.items);
-        _pagina++;
-        _hayMas = p.hayMas;
+        _items = p.items;
+        _total = p.total;
+        _pagina = pagina;
+        _primera = false;
       });
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+    } on PaginaInexistente {
+      // Se borraron registros y esa página ya no existe: retrocede una.
+      if (mounted && gen == _gen && pagina > 1) {
+        await _ir(pagina - 1);
+      }
+      return;
     } catch (e) {
       if (!mounted || gen != _gen) return;
       setState(() => _error = mensajeError(e));
@@ -552,10 +636,15 @@ class ListaPaginadaState extends State<ListaPaginada> {
 
   @override
   Widget build(BuildContext context) {
-    if (_items.isEmpty) {
-      if (_cargando) return const Center(child: CircularProgressIndicator());
+    if (_primera) {
       if (_error != null) {
-        return EstadoError(mensaje: _error!, onReintentar: _siguiente);
+        return EstadoError(mensaje: _error!, onReintentar: () => _ir(_pedida));
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_items.isEmpty) {
+      if (_error != null) {
+        return EstadoError(mensaje: _error!, onReintentar: () => _ir(_pedida));
       }
       return RefreshIndicator(
         onRefresh: recargar,
@@ -567,33 +656,40 @@ class ListaPaginadaState extends State<ListaPaginada> {
         ),
       );
     }
-    return RefreshIndicator(
-      onRefresh: recargar,
-      child: ListView.separated(
-        controller: _scroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: widget.padding,
-        itemCount: _items.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (context, i) {
-          if (i < _items.length) return widget.itemBuilder(context, _items[i]);
-          if (_error != null) {
-            return Center(
-              child: TextButton.icon(
-                onPressed: _siguiente,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text('$_error  ·  Reintentar'),
-              ),
-            );
-          }
-          return _hayMas
-              ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              : const SizedBox(height: 4);
-        },
-      ),
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: recargar,
+          child: ListView.separated(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: widget.padding,
+            itemCount: _items.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, i) {
+              if (i < _items.length) {
+                return widget.itemBuilder(context, _items[i]);
+              }
+              return PaginadorBarra(
+                pagina: _pagina,
+                totalPaginas: totalPaginasDe(_total),
+                total: _total,
+                cargando: _cargando,
+                error: _error,
+                onIr: _ir,
+                onReintentar: () => _ir(_pedida),
+              );
+            },
+          ),
+        ),
+        if (_cargando)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(minHeight: 3),
+          ),
+      ],
     );
   }
 }

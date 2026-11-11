@@ -2,9 +2,11 @@ import hashlib
 from datetime import datetime, timezone as dt_timezone
 
 from django.utils import timezone
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken as JWTRefreshToken
+
+from apps.files.validators import validar_archivo
 
 from .models import RefreshToken
 
@@ -58,3 +60,29 @@ def revocar_token(refresh_str, usuario):
     RefreshToken.objects.filter(
         token_hash=_hash(refresh_str), usuario=usuario
     ).update(revocado=True)
+
+
+# ───────────────────────── Foto de perfil ─────────────────────────
+
+
+def guardar_foto(usuario, archivo):
+    """Valida (PNG/JPG, máx. 5 MB, firma real) y reemplaza la foto del usuario."""
+    nombre, mime = validar_archivo(archivo)
+    if mime not in ("image/png", "image/jpeg"):
+        raise ValidationError("La foto debe ser una imagen PNG o JPG.")
+    anterior = usuario.foto.name if usuario.foto else None
+    usuario.foto.save(nombre, archivo, save=False)
+    usuario.save(update_fields=["foto"])
+    if anterior and anterior != usuario.foto.name:
+        usuario.foto.storage.delete(anterior)
+    return usuario
+
+
+def quitar_foto(usuario):
+    if not usuario.foto:
+        return usuario
+    anterior = usuario.foto.name
+    usuario.foto = None
+    usuario.save(update_fields=["foto"])
+    usuario.foto.storage.delete(anterior)
+    return usuario

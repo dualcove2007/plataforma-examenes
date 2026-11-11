@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar.dart';
 import '../../widgets/ui.dart';
 import 'usuario_form_page.dart';
 
@@ -129,6 +130,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
               activo: _activo,
             ),
             itemBuilder: (_, u) => _TarjetaUsuario(
+              api: widget.api,
               usuario: u,
               esYo: u['id'] == widget.api.usuario?['id'],
               onEditar: () => _abrirForm(u),
@@ -148,11 +150,13 @@ class _UsuariosPageState extends State<UsuariosPage> {
 }
 
 class _TarjetaUsuario extends StatelessWidget {
+  final ApiService api;
   final Map<String, dynamic> usuario;
   final bool esYo;
   final VoidCallback onEditar;
   final VoidCallback onCambiarEstado;
   const _TarjetaUsuario({
+    required this.api,
     required this.usuario,
     required this.esYo,
     required this.onEditar,
@@ -172,22 +176,12 @@ class _TarjetaUsuario extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
         child: Row(
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: estilo.color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Paleta.tinta, width: 1.5),
-              ),
-              child: Text(
-                nombre.isEmpty ? '?' : nombre[0].toUpperCase(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
+            AvatarUsuario(
+              api: api,
+              nombre: nombre,
+              usuarioId: usuario['id'] as int,
+              version: usuario['foto_version'] as String?,
+              color: estilo.color,
             ),
             const SizedBox(width: 12),
             Expanded(

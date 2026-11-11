@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/login_page.dart';
+import 'screens/arranque_page.dart';
 import 'theme/app_theme.dart';
 
 void main() => runApp(const App());
@@ -13,6 +13,6 @@ class App extends StatelessWidget {
     title: 'Exámenes',
     debugShowCheckedModeBanner: false,
     theme: construirTema(),
-    home: const LoginPage(),
+    home: const ArranquePage(),
   );
 }

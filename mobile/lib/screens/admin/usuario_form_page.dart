@@ -1,10 +1,11 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/clave.dart';
+import '../../widgets/avatar.dart';
+import '../../widgets/foto_picker.dart';
 import '../../widgets/ui.dart';
 
 /// Registro (usuario == null) o edición de un usuario. Solo el admin llega aquí.
@@ -34,6 +35,12 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
   bool _verClave = false;
   bool _guardando = false;
   String? _error;
+  FotoElegida? _foto; // foto nueva elegida (aún sin subir)
+  bool _quitarFoto = false; // al editar: quitar la foto actual
+
+  bool get _tieneFoto =>
+      _foto != null ||
+      (_editando && !_quitarFoto && widget.usuario!['foto_version'] != null);
 
   bool get _editando => widget.usuario != null;
   bool get _esYo =>
@@ -77,11 +84,41 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
     }
   }
 
-  String _generarClave() {
-    const car = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final r = Random.secure();
-    final base = List.generate(10, (_) => car[r.nextInt(car.length)]).join();
-    return '$base*';
+  Future<void> _elegirFoto() async {
+    final accion = await menuFoto(context, tieneFoto: _tieneFoto);
+    if (accion == null || !mounted) return;
+    if (accion == AccionFoto.quitar) {
+      setState(() {
+        _foto = null;
+        _quitarFoto = _editando && widget.usuario!['foto_version'] != null;
+      });
+      return;
+    }
+    try {
+      final f = await seleccionarFoto(accion);
+      if (f != null && mounted) {
+        setState(() {
+          _foto = f;
+          _quitarFoto = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) mostrarAviso(context, mensajeError(e), error: true);
+    }
+  }
+
+  /// Sube o quita la foto del usuario ya guardado. Devuelve un aviso si falla.
+  Future<String?> _guardarFoto(int id) async {
+    try {
+      if (_foto != null) {
+        await widget.api.subirFotoUsuario(id, _foto!.bytes, _foto!.nombre);
+      } else if (_quitarFoto) {
+        await widget.api.quitarFotoUsuario(id);
+      }
+      return null;
+    } catch (e) {
+      return 'Los datos se guardaron, pero la foto no: ${mensajeError(e)}';
+    }
   }
 
   Future<void> _guardar() async {
@@ -104,13 +141,23 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
     };
     try {
       if (_editando) {
-        await widget.api.actualizarUsuario(widget.usuario!['id'] as int, datos);
+        final id = widget.usuario!['id'] as int;
+        await widget.api.actualizarUsuario(id, datos);
         if (!mounted) return;
+        final avisoFoto = await _guardarFoto(id);
+        if (!mounted) return;
+        if (avisoFoto != null) mostrarAviso(context, avisoFoto, error: true);
         Navigator.pop(context, true);
       } else {
-        await widget.api.crearUsuario(datos);
+        final nuevo = await widget.api.crearUsuario(datos);
         if (!mounted) return;
-        await _dialogoExito(datos['email'] as String, clave.text);
+        final avisoFoto = await _guardarFoto(nuevo['id'] as int);
+        if (!mounted) return;
+        await _dialogoExito(
+          datos['email'] as String,
+          clave.text,
+          avisoFoto: avisoFoto,
+        );
         if (!mounted) return;
         Navigator.pop(context, true);
       }
@@ -121,7 +168,11 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
     }
   }
 
-  Future<void> _dialogoExito(String correo, String password) {
+  Future<void> _dialogoExito(
+    String correo,
+    String password, {
+    String? avisoFoto,
+  }) {
     var copiado = false;
     return showDialog<void>(
       context: context,
@@ -188,6 +239,17 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
                   ],
                 ),
               ),
+              if (avisoFoto != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  avisoFoto,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFFB3261E),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
           actionsAlignment: MainAxisAlignment.center,
@@ -227,6 +289,29 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
     ),
   );
 
+  Widget _vistaFoto() {
+    const tam = 84.0;
+    if (_foto != null) {
+      return ClipOval(
+        child: Image.memory(
+          _foto!.bytes,
+          width: tam,
+          height: tam,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    final u = widget.usuario;
+    return AvatarUsuario(
+      api: widget.api,
+      nombre: nombre.text,
+      usuarioId: u?['id'] as int?,
+      version: _quitarFoto ? null : u?['foto_version'] as String?,
+      tam: tam,
+      grosorBorde: 2.5,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,6 +348,35 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
                   ),
                 ],
               ),
+            ),
+            _titulo('Foto de perfil', Icons.photo_camera_rounded),
+            Row(
+              children: [
+                _vistaFoto(),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _guardando ? null : _elegirFoto,
+                        icon: const Icon(Icons.add_a_photo_rounded),
+                        label: Text(
+                          _tieneFoto ? 'Cambiar o quitar' : 'Agregar foto',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Opcional. JPG o PNG.',
+                        style: TextStyle(
+                          color: Paleta.tintaSuave,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             _titulo('Datos personales', Icons.badge_rounded),
             TextFormField(
@@ -304,7 +418,7 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
                     : 'Contraseña',
                 helperText: _editando
                     ? 'Déjala vacía para no cambiarla'
-                    : 'Mínimo 8 caracteres, no solo números',
+                    : 'Letras, números y un carácter especial',
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -313,7 +427,7 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
                       tooltip: 'Generar contraseña',
                       icon: const Icon(Icons.casino_rounded),
                       onPressed: () => setState(() {
-                        clave.text = _generarClave();
+                        clave.text = generarClave();
                         _verClave = true;
                       }),
                     ),
@@ -333,10 +447,10 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
                 final s = v ?? '';
                 if (!_editando && s.isEmpty)
                   return 'La contraseña es obligatoria';
-                if (s.isNotEmpty && s.length < 8) return 'Mínimo 8 caracteres';
-                return null;
+                return s.isEmpty ? null : validarClave(s);
               },
             ),
+            _ReglasClave(controller: clave, opcional: _editando),
             _titulo('Rol', Icons.shield_rounded),
             if (_roles == null && _errorRoles == null)
               const Padding(
@@ -448,4 +562,50 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
       ),
     );
   }
+}
+
+/// Lista de reglas que se va marcando mientras se escribe la contraseña.
+class _ReglasClave extends StatelessWidget {
+  final TextEditingController controller;
+  final bool opcional;
+  const _ReglasClave({required this.controller, required this.opcional});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<TextEditingValue>(
+    valueListenable: controller,
+    builder: (_, v, __) {
+      if (opcional && v.text.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: 10, left: 4),
+        child: Wrap(
+          spacing: 14,
+          runSpacing: 6,
+          children: [
+            for (final r in evaluarClave(v.text))
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    r.cumple
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 16,
+                    color: r.cumple ? Paleta.verde : Paleta.tintaSuave,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    r.texto,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: r.cumple ? Paleta.verde : Paleta.tintaSuave,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      );
+    },
+  );
 }

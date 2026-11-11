@@ -5,7 +5,22 @@ App para Android/iOS que consume la API Django del proyecto.
 ## Qué incluye
 
 - **Login** con diseño propio (ilustración, íconos, validaciones). Según el rol
-  entra al panel de administrador o a la vista de exámenes.
+  entra al panel de administrador, docente o estudiante.
+- **Sesión persistente**: el refresh token se guarda cifrado en el teléfono
+  (`flutter_secure_storage`). Al abrir la app se retoma la sesión sin pedir la
+  contraseña; solo «Cerrar sesión» (o una sesión vencida/revocada) vuelve al login.
+  Si al abrir no hay internet, la sesión no se borra: se ofrece reintentar.
+- **Listas paginadas**: todas las listas muestran 10 registros por página con
+  botones «anterior / siguiente» y el rango visible (`ListaPaginada` y
+  `PaginadorBarra` en `lib/widgets/ui.dart`).
+- **Foto de perfil**: el administrador la puede poner al registrar o editar un
+  usuario, y cada usuario (de cualquier rol) la agrega, cambia o quita desde su
+  perfil (en admin y docente: botón con su foto en la cabecera del inicio).
+  JPG o PNG, máx. 5 MB; se sirve por la API autenticada, no como archivo público.
+- **Contraseñas** (se validan en la app y en el backend): mínimo 8 caracteres,
+  letras y números, al menos un carácter especial y sin 3 o más números
+  consecutivos (123 o 321 no; 12 o 23 sí). El generador del formulario de
+  usuarios siempre cumple las reglas.
 - **Panel de administrador** (navegación inferior):
   - **Inicio**: estadísticas (usuarios, exámenes, intentos, aprobación) y accesos rápidos.
   - **Usuarios**: lista con búsqueda y filtros por rol/estado, **registro de usuarios**,
@@ -27,8 +42,8 @@ App para Android/iOS que consume la API Django del proyecto.
     revisó y el examen cerró, muestra el detalle pregunta por pregunta.
   - **Resultados**: historial de notas. **Materias**: catálogo con búsqueda.
   - **Perfil**: datos de la cuenta, notificaciones y cerrar sesión.
-- **Docente**: por ahora solo una pantalla provisional con cierre de sesión (el panel
-  completo es el siguiente avance).
+- **Docente**: inicio, bancos y preguntas, exámenes (crear, asignar, publicar) y
+  resultados con revisión de preguntas abiertas.
 
 ### Vigilancia durante el examen
 
@@ -71,6 +86,9 @@ lib/
   screens/
     admin/         panel del administrador
     estudiante/    panel del estudiante
-    docente/       panel del docente (provisional)
+    docente/       panel del docente
+    arranque_page.dart         retoma la sesión guardada al abrir la app
+    perfil_page.dart           perfil y foto, compartido por todos los roles
     notificaciones_page.dart   compartida por todos los roles
+  utils/       reglas de contraseña (clave.dart)
 ```

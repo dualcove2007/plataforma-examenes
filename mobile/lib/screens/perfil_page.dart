@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../../services/api_service.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/sesion.dart';
-import '../../widgets/ui.dart';
-import '../notificaciones_page.dart';
+import '../services/api_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/avatar.dart';
+import '../widgets/foto_picker.dart';
+import '../widgets/sesion.dart';
+import '../widgets/ui.dart';
+import 'notificaciones_page.dart';
 
-/// Perfil del usuario: sus datos, notificaciones y cierre de sesión.
+/// Abre el perfil encima de la pantalla actual (admin y docente lo usan desde su cabecera).
+Future<void> abrirPerfil(BuildContext context, ApiService api) =>
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PerfilPage(api: api, enRuta: true)),
+    );
+
+/// Perfil del usuario: su foto, sus datos, notificaciones y cierre de sesión.
 class PerfilPage extends StatefulWidget {
   final ApiService api;
-  const PerfilPage({super.key, required this.api});
+
+  /// true cuando se abre encima de otra pantalla: muestra el botón de volver.
+  final bool enRuta;
+  const PerfilPage({super.key, required this.api, this.enRuta = false});
 
   @override
   State<PerfilPage> createState() => _PerfilPageState();
@@ -17,6 +28,30 @@ class PerfilPage extends StatefulWidget {
 
 class _PerfilPageState extends State<PerfilPage> {
   late Future<int> noLeidas = _contar();
+  bool _subiendo = false;
+
+  Future<void> _menuFoto() async {
+    final tiene = widget.api.usuario?['foto_version'] != null;
+    final accion = await menuFoto(context, tieneFoto: tiene);
+    if (accion == null || !mounted) return;
+    try {
+      if (accion == AccionFoto.quitar) {
+        setState(() => _subiendo = true);
+        await widget.api.quitarMiFoto();
+        if (mounted) mostrarAviso(context, 'Foto eliminada');
+      } else {
+        final f = await seleccionarFoto(accion);
+        if (f == null || !mounted) return;
+        setState(() => _subiendo = true);
+        await widget.api.cambiarMiFoto(f.bytes, f.nombre);
+        if (mounted) mostrarAviso(context, 'Foto actualizada');
+      }
+    } catch (e) {
+      if (mounted) mostrarAviso(context, mensajeError(e), error: true);
+    } finally {
+      if (mounted) setState(() => _subiendo = false);
+    }
+  }
 
   Future<int> _contar() => widget.api.noLeidas().catchError((_) => 0);
 
@@ -40,17 +75,25 @@ class _PerfilPageState extends State<PerfilPage> {
     final nombre = '${u['nombre'] ?? 'Usuario'}';
     final rol = u['rol'] as String?;
     final estilo = EstiloRol.de(rol);
-    final inicial = nombre.trim().isEmpty ? '?' : nombre.trim()[0].toUpperCase();
+    final version = u['foto_version'] as String?;
     final t = Theme.of(context).textTheme;
 
     return Scaffold(
       body: Column(
         children: [
-          const CabeceraSeccion(
+          CabeceraSeccion(
             titulo: 'Mi perfil',
             subtitulo: 'Tu cuenta y tus avisos',
             icono: Icons.person_rounded,
             seccion: Seccion.perfil,
+            leading: widget.enRuta
+                ? IconButton(
+                    tooltip: 'Volver',
+                    color: Seccion.perfil.texto,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.of(context).pop(),
+                  )
+                : null,
           ),
           Expanded(
             child: ListView(
@@ -60,25 +103,57 @@ class _PerfilPageState extends State<PerfilPage> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: estilo.color,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Paleta.tinta, width: 3),
-                        ),
-                        child: Text(
-                          inicial,
-                          style: const TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.w800,
-                            color: Paleta.tinta,
-                          ),
+                      GestureDetector(
+                        onTap: _subiendo ? null : _menuFoto,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            AvatarUsuario(
+                              api: widget.api,
+                              nombre: nombre,
+                              version: version,
+                              tam: 88,
+                              color: estilo.color,
+                              grosorBorde: 3,
+                            ),
+                            Positioned(
+                              right: -2,
+                              bottom: -2,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Paleta.verde,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: _subiendo
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.photo_camera_rounded,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _subiendo ? null : _menuFoto,
+                        child: Text(
+                          version == null ? 'Agregar foto' : 'Cambiar foto',
+                        ),
+                      ),
                       Text(
                         nombre,
                         textAlign: TextAlign.center,

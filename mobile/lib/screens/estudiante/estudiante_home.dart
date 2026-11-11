@@ -4,7 +4,7 @@ import '../../services/api_service.dart';
 import 'inicio_page.dart';
 import 'materias_page.dart';
 import 'mis_examenes_page.dart';
-import 'perfil_page.dart';
+import '../perfil_page.dart';
 import 'resultados_page.dart';
 
 /// Contenedor del estudiante con navegación inferior.

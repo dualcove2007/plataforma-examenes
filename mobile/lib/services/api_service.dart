@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
@@ -12,9 +15,20 @@ class Pagina {
   const Pagina(this.items, this.total, this.hayMas);
 }
 
+/// Se pidió una página que ya no existe (por ejemplo, se borró el último
+/// registro de la última página).
+class PaginaInexistente implements Exception {
+  const PaginaInexistente();
+}
+
 class ApiService {
   String? _access;
   String? _refresh;
+
+  // Solo se guarda el refresh token (cifrado por el sistema). Con él se
+  // retoma la sesión al abrir la app, sin volver a pedir la contraseña.
+  static const _almacen = FlutterSecureStorage();
+  static const _claveRefresh = 'refresh_token';
 
   /// Usuario que inició sesión (lo devuelve el login).
   Map<String, dynamic>? usuario;
@@ -58,6 +72,7 @@ class ApiService {
     _access = null;
     _refresh = null;
     usuario = null;
+    await _borrarSesionGuardada();
   }
 
   void _guardarTokens(Map<String, dynamic> d) {
@@ -66,6 +81,78 @@ class ApiService {
     if (d['usuario'] is Map) {
       usuario = Map<String, dynamic>.from(d['usuario']);
     }
+    unawaited(_guardarSesion());
+  }
+
+  Future<void> _guardarSesion() async {
+    try {
+      if (_refresh != null) {
+        await _almacen.write(key: _claveRefresh, value: _refresh);
+      }
+    } catch (_) {
+      // Si el teléfono no deja guardar, la sesión solo dura mientras la app esté abierta.
+    }
+  }
+
+  Future<void> _borrarSesionGuardada() async {
+    try {
+      await _almacen.delete(key: _claveRefresh);
+    } catch (_) {}
+  }
+
+  /// Retoma la sesión guardada en el teléfono.
+  /// - true: hay sesión válida (ya se cargó el usuario).
+  /// - false: no había sesión o ya expiró (se borra lo guardado).
+  /// - lanza excepción si no hay conexión; en ese caso la sesión NO se borra.
+  Future<bool> restaurarSesion() async {
+    String? guardado;
+    try {
+      guardado = await _almacen.read(key: _claveRefresh);
+    } catch (_) {
+      return false;
+    }
+    if (guardado == null || guardado.isEmpty) return false;
+
+    final http.Response r;
+    try {
+      r = await http
+          .post(
+            Uri.parse('$baseUrl/auth/refresh/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refresh': guardado}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw Exception('No se pudo conectar con el servidor.');
+    }
+    if (r.statusCode == 400 || r.statusCode == 401 || r.statusCode == 403) {
+      await _borrarSesionGuardada();
+      return false;
+    }
+    if (r.statusCode != 200) throw Exception(_mensaje(r));
+
+    _guardarTokens(_json(r));
+    final http.Response yo;
+    try {
+      yo = await _get('/auth/me/');
+    } catch (_) {
+      throw Exception('No se pudo conectar con el servidor.');
+    }
+    if (yo.statusCode == 401 || yo.statusCode == 403) {
+      _access = null;
+      _refresh = null;
+      await _borrarSesionGuardada();
+      return false;
+    }
+    usuario = _mapa(_ok(yo));
+    if (usuario?['activo'] == false) {
+      _access = null;
+      _refresh = null;
+      usuario = null;
+      await _borrarSesionGuardada();
+      return false;
+    }
+    return true;
   }
 
   Future<bool> _renovar() async {
@@ -180,7 +267,9 @@ class ApiService {
         if (e.value != null && e.value!.isNotEmpty) e.key: e.value!,
       'page': '$pagina',
     };
-    final r = _ok(await _get('$ruta?${Uri(queryParameters: q).query}'));
+    final resp = await _get('$ruta?${Uri(queryParameters: q).query}');
+    if (resp.statusCode == 404 && pagina > 1) throw const PaginaInexistente();
+    final r = _ok(resp);
     final d = _json(r);
     return Pagina(
       List<Map<String, dynamic>>.from(d['results']),
@@ -329,6 +418,72 @@ class ApiService {
   /// El backend no borra: desactiva la cuenta y cierra sus sesiones.
   Future<void> desactivarUsuario(int id) async {
     _ok(await _delete('/usuarios/$id/'));
+  }
+
+  // ───────────────────────── Fotos de perfil ─────────────────────────
+
+  final _cacheFotos = <String, Uint8List>{};
+
+  String _claveFoto(String version, int? usuarioId) =>
+      '${usuarioId ?? 'yo'}:$version';
+
+  Uint8List? fotoEnCache(String version, {int? usuarioId}) =>
+      _cacheFotos[_claveFoto(version, usuarioId)];
+
+  /// Descarga la foto con la sesión abierta. [usuarioId] null = la propia.
+  /// [version] es el `foto_version` del usuario: si cambia, se vuelve a pedir.
+  Future<Uint8List?> fotoBytes(String version, {int? usuarioId}) async {
+    final clave = _claveFoto(version, usuarioId);
+    final guardada = _cacheFotos[clave];
+    if (guardada != null) return guardada;
+    final r = await _get(
+      usuarioId == null ? '/auth/me/foto/' : '/usuarios/$usuarioId/foto/',
+    );
+    if (r.statusCode == 404) return null;
+    _ok(r);
+    if (_cacheFotos.length >= 80) _cacheFotos.remove(_cacheFotos.keys.first);
+    return _cacheFotos[clave] = r.bodyBytes;
+  }
+
+  Future<http.Response> _subirFoto(
+    String ruta,
+    Uint8List bytes,
+    String nombre,
+  ) async {
+    Future<http.Response> pedir() async {
+      final req = http.MultipartRequest('PUT', Uri.parse('$baseUrl$ruta'));
+      req.headers['Authorization'] = 'Bearer $_access';
+      req.files.add(http.MultipartFile.fromBytes('foto', bytes, filename: nombre));
+      return http.Response.fromStream(await req.send());
+    }
+
+    var r = await pedir();
+    if (r.statusCode == 401 && await _renovar()) r = await pedir();
+    return r;
+  }
+
+  /// Cambia o agrega la foto del usuario que tiene la sesión abierta.
+  Future<void> cambiarMiFoto(Uint8List bytes, String nombre) async {
+    final r = _mapa(_ok(await _subirFoto('/auth/me/foto/', bytes, nombre)));
+    usuario = Map<String, dynamic>.from(r);
+  }
+
+  Future<void> quitarMiFoto() async {
+    _ok(await _delete('/auth/me/foto/'));
+    usuario = {...?usuario, 'foto_version': null};
+  }
+
+  /// Solo administrador: foto de cualquier usuario.
+  Future<void> subirFotoUsuario(int id, Uint8List bytes, String nombre) async {
+    final r = _mapa(_ok(await _subirFoto('/usuarios/$id/foto/', bytes, nombre)));
+    if (id == usuario?['id']) {
+      usuario = {...?usuario, 'foto_version': r['foto_version']};
+    }
+  }
+
+  Future<void> quitarFotoUsuario(int id) async {
+    _ok(await _delete('/usuarios/$id/foto/'));
+    if (id == usuario?['id']) usuario = {...?usuario, 'foto_version': null};
   }
 
   // ───────────────────────── Administrador: roles y permisos ─────────────────────────

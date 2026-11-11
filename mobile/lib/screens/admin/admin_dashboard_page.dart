@@ -3,8 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/avatar.dart';
 import '../../widgets/sesion.dart';
 import '../../widgets/ui.dart';
+import '../perfil_page.dart';
 import 'usuario_form_page.dart';
 
 class _Datos {
@@ -78,6 +80,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             icono: Icons.waving_hand_rounded,
             seccion: Seccion.inicio,
             acciones: [
+              IconButton(
+                tooltip: 'Mi perfil',
+                onPressed: () async {
+                  await abrirPerfil(context, widget.api);
+                  if (mounted) setState(() {});
+                },
+                icon: AvatarUsuario(
+                  api: widget.api,
+                  nombre: '${widget.api.usuario?['nombre'] ?? ''}',
+                  version: widget.api.usuario?['foto_version'] as String?,
+                  tam: 36,
+                  color: Colors.white,
+                  colorBorde: Colors.white,
+                ),
+              ),
               IconButton(
                 tooltip: 'Cerrar sesión',
                 color: Colors.white,

@@ -1,7 +1,13 @@
+from pathlib import Path
+
 from django.contrib.auth import authenticate
+from django.http import FileResponse
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import NotFound
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,12 +17,20 @@ from rest_framework.exceptions import Throttled
 from .throttles import LoginEmailThrottle, LoginIPThrottle
 
 from .serializers import (
+    FotoSerializer,
     LoginSerializer,
     RefreshSerializer,
     TokensSerializer,
     UsuarioSerializer,
 )
-from .services import AutenticacionFallida, emitir_tokens, renovar_tokens, revocar_token
+from .services import (
+    AutenticacionFallida,
+    emitir_tokens,
+    guardar_foto,
+    quitar_foto,
+    renovar_tokens,
+    revocar_token,
+)
 
 
 class LoginView(APIView):
@@ -78,3 +92,41 @@ class MeView(APIView):
     @extend_schema(responses=UsuarioSerializer)
     def get(self, request):
         return Response(UsuarioSerializer(request.user).data)
+
+
+def respuesta_foto(usuario):
+    """Entrega la imagen (solo con sesión iniciada; no se sirve como archivo público)."""
+    if not usuario.foto:
+        raise NotFound("El usuario no tiene foto.")
+    try:
+        abierto = usuario.foto.open("rb")
+    except FileNotFoundError:
+        raise NotFound("La foto ya no está disponible.")
+    mime = "image/png" if Path(usuario.foto.name).suffix.lower() == ".png" else "image/jpeg"
+    respuesta = FileResponse(abierto, content_type=mime)
+    respuesta["X-Content-Type-Options"] = "nosniff"
+    return respuesta
+
+
+class MeFotoView(APIView):
+    """Foto de perfil del usuario que inició sesión: ver, cambiar o quitar."""
+
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(responses={200: OpenApiTypes.BINARY})
+    def get(self, request):
+        return respuesta_foto(request.user)
+
+    @extend_schema(
+        request={"multipart/form-data": FotoSerializer}, responses=UsuarioSerializer
+    )
+    def put(self, request):
+        serializer = FotoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        usuario = guardar_foto(request.user, serializer.validated_data["foto"])
+        return Response(UsuarioSerializer(usuario).data)
+
+    @extend_schema(responses={204: None})
+    def delete(self, request):
+        quitar_foto(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)

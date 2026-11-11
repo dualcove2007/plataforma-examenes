@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
@@ -18,13 +20,29 @@ class TokensSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
 
+def _version_foto(usuario):
+    """Identificador de la foto actual (cambia en cada subida) o None si no tiene."""
+    return Path(usuario.foto.name).stem if usuario.foto else None
+
+
+class FotoSerializer(serializers.Serializer):
+    foto = serializers.FileField()
+
+
 class UsuarioSerializer(serializers.ModelSerializer):
     rol = serializers.CharField(source="rol.nombre")
     permisos = serializers.SerializerMethodField()
+    foto_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
-        fields = ["id", "nombre", "email", "rol", "permisos", "activo", "fecha_creacion"]
+        fields = [
+            "id", "nombre", "email", "rol", "permisos", "activo",
+            "fecha_creacion", "foto_version",
+        ]
+
+    def get_foto_version(self, obj) -> str | None:
+        return _version_foto(obj)
 
     def get_permisos(self, obj) -> list[str]:
         return list(obj.rol.permisos.values_list("nombre", flat=True))
@@ -32,10 +50,17 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 class UsuarioListSerializer(serializers.ModelSerializer):
     rol_nombre = serializers.CharField(source="rol.nombre", read_only=True)
+    foto_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
-        fields = ["id", "nombre", "email", "rol", "rol_nombre", "activo", "fecha_creacion"]
+        fields = [
+            "id", "nombre", "email", "rol", "rol_nombre", "activo",
+            "fecha_creacion", "foto_version",
+        ]
+
+    def get_foto_version(self, obj) -> str | None:
+        return _version_foto(obj)
 
 
 class UsuarioWriteSerializer(serializers.ModelSerializer):

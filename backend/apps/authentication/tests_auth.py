@@ -111,7 +111,7 @@ class AutenticacionTests(TestCase):
         admin = self.con_token(self.login("admin@demo.com").data["access"])
         r = admin.patch(
             f"/api/usuarios/{self.docente.pk}/",
-            {"password": "NuevaClave987*"},
+            {"password": "NuevaClave937*"},
             format="json",
         )
         self.assertEqual(r.status_code, 200)

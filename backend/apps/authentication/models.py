@@ -1,5 +1,14 @@
+import uuid
+from pathlib import Path
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
+
+
+def ruta_foto(instancia, nombre_original):
+    """Nombre generado (uuid): nunca se confía en el nombre del cliente."""
+    extension = Path(nombre_original).suffix.lower()
+    return f"usuarios/{instancia.pk}/{uuid.uuid4().hex}{extension}"
 
 
 class Permiso(models.Model):
@@ -68,6 +77,7 @@ class Usuario(AbstractBaseUser):
     password = models.CharField(max_length=128, db_column="password_hash")
     rol = models.ForeignKey(Rol, on_delete=models.PROTECT, related_name="usuarios")
     activo = models.BooleanField(default=True)
+    foto = models.FileField(upload_to=ruta_foto, max_length=255, null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"

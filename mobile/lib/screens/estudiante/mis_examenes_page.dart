@@ -21,6 +21,14 @@ class _MisExamenesPageState extends State<MisExamenesPage> {
   late Future<List<Map<String, dynamic>>> futuro = widget.api
       .examenesConIntentos();
   _Filtro filtro = _Filtro.todos;
+  final _scroll = ScrollController();
+  int _pagina = 1;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   void _recargar() =>
       setState(() => futuro = widget.api.examenesConIntentos());
@@ -72,7 +80,10 @@ class _MisExamenesPageState extends State<MisExamenesPage> {
         const SizedBox(height: 12),
         FilaFiltros<_Filtro>(
           valor: filtro,
-          onCambio: (v) => setState(() => filtro = v),
+          onCambio: (v) => setState(() {
+            filtro = v;
+            _pagina = 1;
+          }),
           opciones: const [
             OpcionFiltro('Todos', _Filtro.todos, Icons.apps_rounded),
             OpcionFiltro(
@@ -102,6 +113,12 @@ class _MisExamenesPageState extends State<MisExamenesPage> {
                 );
               }
               final items = _ordenar(snap.data!);
+              final totalPaginas = totalPaginasDe(items.length);
+              final pagina = _pagina > totalPaginas ? totalPaginas : _pagina;
+              final visibles = items
+                  .skip((pagina - 1) * tamanoPagina)
+                  .take(tamanoPagina)
+                  .toList();
               return RefreshIndicator(
                 onRefresh: () async {
                   _recargar();
@@ -125,14 +142,28 @@ class _MisExamenesPageState extends State<MisExamenesPage> {
                         ),
                       )
                     : ListView.separated(
+                        controller: _scroll,
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                        itemCount: items.length,
+                        itemCount: visibles.length + 1,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => TarjetaExamen(
-                          examen: items[i],
-                          onTap: () => _abrir(items[i]),
-                        ),
+                        itemBuilder: (_, i) {
+                          if (i == visibles.length) {
+                            return PaginadorBarra(
+                              pagina: pagina,
+                              totalPaginas: totalPaginas,
+                              total: items.length,
+                              onIr: (p) {
+                                setState(() => _pagina = p);
+                                if (_scroll.hasClients) _scroll.jumpTo(0);
+                              },
+                            );
+                          }
+                          return TarjetaExamen(
+                            examen: visibles[i],
+                            onTap: () => _abrir(visibles[i]),
+                          );
+                        },
                       ),
               );
             },

@@ -1,16 +1,24 @@
-from rest_framework import mixins, viewsets
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .filters import UsuarioFilter
 from .models import Permiso, Rol, Usuario
 from .permissions import tiene_permiso
 from .serializers import (
+    FotoSerializer,
     PermisoSerializer,
     RolSerializer,
     UsuarioListSerializer,
     UsuarioWriteSerializer,
 )
+from .services import guardar_foto, quitar_foto
+from .views import respuesta_foto
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -24,6 +32,29 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve"):
             return UsuarioListSerializer
         return UsuarioWriteSerializer
+
+    @extend_schema(
+        request={"multipart/form-data": FotoSerializer},
+        responses={200: OpenApiTypes.BINARY},
+    )
+    @action(
+        detail=True,
+        methods=["get", "put", "delete"],
+        url_path="foto",
+        parser_classes=[MultiPartParser],
+    )
+    def foto(self, request, pk=None):
+        """Ver, cambiar o quitar la foto de cualquier usuario (solo quien gestiona usuarios)."""
+        usuario = self.get_object()
+        if request.method == "GET":
+            return respuesta_foto(usuario)
+        if request.method == "DELETE":
+            quitar_foto(usuario)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = FotoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        usuario = guardar_foto(usuario, serializer.validated_data["foto"])
+        return Response(UsuarioListSerializer(usuario).data)
 
     def perform_destroy(self, instance):
         # No se borra: se desactiva para conservar el historial y las relaciones.
