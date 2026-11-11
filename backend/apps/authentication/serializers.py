@@ -9,6 +9,8 @@ from .models import Permiso, Rol, Usuario
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    # Solo hace falta si la cuenta tiene varios roles (nombre del rol elegido).
+    rol = serializers.CharField(required=False, allow_blank=True)
 
 
 class RefreshSerializer(serializers.Serializer):
@@ -30,16 +32,20 @@ class FotoSerializer(serializers.Serializer):
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    rol = serializers.CharField(source="rol.nombre")
+    rol = serializers.CharField(source="rol.nombre")  # rol de esta sesión
+    roles = serializers.SerializerMethodField()  # todos los roles de la cuenta
     permisos = serializers.SerializerMethodField()
     foto_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
         fields = [
-            "id", "nombre", "email", "rol", "permisos", "activo",
+            "id", "nombre", "email", "rol", "roles", "permisos", "activo",
             "fecha_creacion", "foto_version",
         ]
+
+    def get_roles(self, obj) -> list[str]:
+        return [r.nombre for r in obj.roles_disponibles()]
 
     def get_foto_version(self, obj) -> str | None:
         return _version_foto(obj)
@@ -50,14 +56,22 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 class UsuarioListSerializer(serializers.ModelSerializer):
     rol_nombre = serializers.CharField(source="rol.nombre", read_only=True)
+    roles = serializers.SerializerMethodField()
+    roles_nombres = serializers.SerializerMethodField()
     foto_version = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
         fields = [
-            "id", "nombre", "email", "rol", "rol_nombre", "activo",
-            "fecha_creacion", "foto_version",
+            "id", "nombre", "email", "rol", "rol_nombre", "roles",
+            "roles_nombres", "activo", "fecha_creacion", "foto_version",
         ]
+
+    def get_roles(self, obj) -> list[int]:
+        return [r.id for r in obj.roles_disponibles()]
+
+    def get_roles_nombres(self, obj) -> list[str]:
+        return [r.nombre for r in obj.roles_disponibles()]
 
     def get_foto_version(self, obj) -> str | None:
         return _version_foto(obj)
@@ -68,9 +82,24 @@ class UsuarioWriteSerializer(serializers.ModelSerializer):
         write_only=True, required=False, validators=[validate_password]
     )
 
+    # Todos los roles con los que puede entrar (el principal siempre se incluye).
+    roles = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Rol.objects.all(), required=False
+    )
+
     class Meta:
         model = Usuario
-        fields = ["id", "nombre", "email", "password", "rol", "activo"]
+        fields = ["id", "nombre", "email", "password", "rol", "roles", "activo"]
+
+    def validate_roles(self, value):
+        request = self.context.get("request")
+        if self.instance and request and self.instance.pk == request.user.pk:
+            actuales = {r.id for r in self.instance.roles_disponibles()}
+            if not actuales <= {r.id for r in value}:
+                raise serializers.ValidationError(
+                    "No puedes quitarte roles a ti mismo."
+                )
+        return value
 
     def validate_rol(self, value):
         request = self.context.get("request")
@@ -103,11 +132,15 @@ class UsuarioWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        return Usuario.objects.create_user(password=password, **validated_data)
+        roles = validated_data.pop("roles", [])
+        usuario = Usuario.objects.create_user(password=password, **validated_data)
+        usuario.roles.add(*roles)
+        return usuario
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
         usuario = super().update(instance, validated_data)
+        usuario.roles.add(usuario.rol)  # el rol principal siempre está disponible
         if password:
             usuario.set_password(password)
             usuario.save(update_fields=["password"])

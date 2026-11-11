@@ -177,5 +177,5 @@ class EstudianteViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Usuario.objects.filter(
-            activo=True, rol__nombre=Rol.ESTUDIANTE
+            activo=True, roles__nombre=Rol.ESTUDIANTE
         ).order_by("nombre")

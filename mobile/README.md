@@ -4,6 +4,9 @@ App para Android/iOS que consume la API Django del proyecto.
 
 ## Qué incluye
 
+- **Varios roles en una cuenta**: el admin puede darle a un usuario más de un rol
+  (ej. Administrador y Docente) desde el formulario de usuario. Con ese correo, al
+  iniciar sesión la app pregunta con qué rol entrar; la sesión guardada conserva ese rol.
 - **Login** con diseño propio (ilustración, íconos, validaciones). Según el rol
   entra al panel de administrador, docente o estudiante.
 - **Sesión persistente**: el refresh token se guarda cifrado en el teléfono

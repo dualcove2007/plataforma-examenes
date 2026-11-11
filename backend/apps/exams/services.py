@@ -93,7 +93,7 @@ def asignar_estudiantes(examen, ids):
     ids = set(ids)
     validos = set(
         Usuario.objects.filter(
-            id__in=ids, activo=True, rol__nombre=Rol.ESTUDIANTE
+            id__in=ids, activo=True, roles__nombre=Rol.ESTUDIANTE
         ).values_list("id", flat=True)
     )
     invalidos = sorted(ids - validos)

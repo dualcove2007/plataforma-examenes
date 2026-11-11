@@ -167,6 +167,10 @@ class _TarjetaUsuario extends StatelessWidget {
   Widget build(BuildContext context) {
     final rol = '${usuario['rol_nombre']}';
     final estilo = EstiloRol.de(rol);
+    // Todos los roles de la cuenta (el principal si el servidor no los manda).
+    final roles = [
+      for (final r in (usuario['roles_nombres'] as List? ?? [rol])) '$r',
+    ];
     final activo = usuario['activo'] == true;
     final nombre = '${usuario['nombre']}'.trim();
     return Opacity(
@@ -211,7 +215,12 @@ class _TarjetaUsuario extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      Etiqueta(rol, icono: estilo.icono, fondo: estilo.suave),
+                      for (final nombreRol in roles)
+                        Etiqueta(
+                          nombreRol,
+                          icono: EstiloRol.de(nombreRol).icono,
+                          fondo: EstiloRol.de(nombreRol).suave,
+                        ),
                       if (!activo)
                         const Etiqueta(
                           'Inactivo',

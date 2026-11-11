@@ -59,11 +59,29 @@ class LoginView(APIView):
             registrar("login_fallido", "Usuario", "", {"email": email})
             raise AutenticacionFallida("Email o contraseña incorrectos.")
 
+        disponibles = usuario.roles_disponibles()
+        elegido = serializer.validated_data.get("rol", "").strip()
+        if elegido:
+            rol = next((r for r in disponibles if r.nombre == elegido), None)
+            if rol is None:
+                raise AutenticacionFallida("Tu cuenta no tiene ese rol.")
+        elif len(disponibles) > 1:
+            # Varios roles: la app debe preguntar con cuál entrar y volver a enviar.
+            return Response(
+                {"requiere_rol": True, "roles": [r.nombre for r in disponibles]}
+            )
+        else:
+            rol = disponibles[0]
+
+        usuario.activar_rol(rol)
         usuario.last_login = timezone.now()
         usuario.save(update_fields=["last_login"])
-        registrar("login", "Usuario", usuario.pk, usuario=usuario)
+        registrar("login", "Usuario", usuario.pk, {"rol": rol.nombre}, usuario=usuario)
         return Response(
-            {**emitir_tokens(usuario), "usuario": UsuarioSerializer(usuario).data}
+            {
+                **emitir_tokens(usuario, rol.nombre),
+                "usuario": UsuarioSerializer(usuario).data,
+            }
         )
 
 

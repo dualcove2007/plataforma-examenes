@@ -62,6 +62,7 @@ class UsuarioManager(BaseUserManager):
         )
         user.set_password(password)
         user.save(using=self._db)
+        user.roles.add(rol)  # el rol principal también es un rol disponible
         return user
 
     def create_superuser(self, email, nombre, password=None, **extra):
@@ -75,7 +76,11 @@ class Usuario(AbstractBaseUser):
     nombre = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128, db_column="password_hash")
+    # Rol principal (el de la cuenta). Durante una sesión, `rol` refleja el rol
+    # elegido al iniciar sesión (ver `activar_rol`); lo guardado en la BDD no cambia.
     rol = models.ForeignKey(Rol, on_delete=models.PROTECT, related_name="usuarios")
+    # Todos los roles con los que la persona puede entrar con este mismo correo.
+    roles = models.ManyToManyField(Rol, related_name="usuarios_roles", blank=True)
     activo = models.BooleanField(default=True)
     foto = models.FileField(upload_to=ruta_foto, max_length=255, null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -89,6 +94,35 @@ class Usuario(AbstractBaseUser):
 
     def __str__(self):
         return self.email
+
+    # ── Roles múltiples ──
+
+    def roles_disponibles(self):
+        """Roles con los que puede iniciar sesión (siempre incluye el principal)."""
+        principal_id = getattr(self, "_rol_principal_id", self.rol_id)
+        roles = {r.id: r for r in self.roles.all()}
+        if principal_id not in roles:
+            roles[principal_id] = Rol.objects.get(pk=principal_id)
+        return sorted(roles.values(), key=lambda r: r.id)
+
+    def activar_rol(self, rol):
+        """Usa `rol` como rol de esta sesión, solo en memoria (no se guarda)."""
+        if not hasattr(self, "_rol_principal_id"):
+            self._rol_principal_id = self.rol_id
+        self.rol = rol
+
+    def save(self, *args, **kwargs):
+        # Si hay un rol de sesión activo, nunca se persiste en lugar del principal.
+        principal_id = getattr(self, "_rol_principal_id", None)
+        if principal_id is not None and self.rol_id != principal_id:
+            activo = self.rol
+            self.rol_id = principal_id
+            try:
+                super().save(*args, **kwargs)
+            finally:
+                self.rol = activo
+        else:
+            super().save(*args, **kwargs)
 
     # Compatibilidad con Django (login y admin)
     @property

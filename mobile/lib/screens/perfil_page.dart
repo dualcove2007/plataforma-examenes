@@ -69,6 +69,16 @@ class _PerfilPageState extends State<PerfilPage> {
     return coma == -1 ? completa : completa.substring(0, coma);
   }
 
+  /// "Docente" o, si la cuenta tiene más roles, "Docente · también: Estudiante".
+  String _textoRol(String? rol, Object? roles) {
+    final otros = [
+      for (final r in (roles as List? ?? const []))
+        if (r != rol) '$r',
+    ];
+    final base = rol ?? '—';
+    return otros.isEmpty ? base : '$base · también: ${otros.join(', ')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final u = widget.api.usuario ?? const <String, dynamic>{};
@@ -190,7 +200,7 @@ class _PerfilPageState extends State<PerfilPage> {
                         estilo.icono,
                         estilo.suave,
                         'Rol',
-                        rol ?? '—',
+                        _textoRol(rol, u['roles']),
                       ),
                       const Divider(height: 24),
                       _Fila(

@@ -1,9 +1,13 @@
 import django_filters
 
-from .models import Usuario
+from .models import Rol, Usuario
 
 
 class UsuarioFilter(django_filters.FilterSet):
+    # ?rol=<id> trae a quien tenga ese rol (principal o adicional).
+    rol = django_filters.ModelChoiceFilter(
+        field_name="roles", queryset=Rol.objects.all()
+    )
     creado_desde = django_filters.DateFilter(
         field_name="fecha_creacion", lookup_expr="date__gte"
     )
@@ -13,4 +17,4 @@ class UsuarioFilter(django_filters.FilterSet):
 
     class Meta:
         model = Usuario
-        fields = {"rol": ["exact"], "activo": ["exact"]}
+        fields = {"activo": ["exact"]}

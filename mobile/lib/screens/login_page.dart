@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/selector_rol.dart';
 import '../widgets/ui.dart';
 import 'home_segun_rol.dart';
 
@@ -38,7 +39,15 @@ class _LoginPageState extends State<LoginPage> {
       error = null;
     });
     try {
-      await api.login(email.text.trim(), pass.text);
+      final correo = email.text.trim();
+      final roles = await api.login(correo, pass.text);
+      if (roles != null) {
+        // La cuenta tiene varios roles: se pregunta con cuál entrar.
+        if (!mounted) return;
+        final elegido = await elegirRol(context, roles);
+        if (elegido == null) return; // canceló: se queda en el login
+        await api.login(correo, pass.text, rol: elegido);
+      }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => homeSegunRol(api)),

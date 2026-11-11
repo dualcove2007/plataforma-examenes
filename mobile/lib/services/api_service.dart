@@ -42,14 +42,24 @@ class ApiService {
 
   // ───────────────────────── Sesión ─────────────────────────
 
-  Future<void> login(String email, String password) async {
+  /// Inicia sesión. Devuelve `null` si ya entró; o la lista de roles de la
+  /// cuenta si tiene varios y hay que elegir uno (se vuelve a llamar con [rol]).
+  Future<List<String>?> login(
+    String email,
+    String password, {
+    String? rol,
+  }) async {
     final http.Response r;
     try {
       r = await http
           .post(
             Uri.parse('$baseUrl/auth/login/'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'password': password}),
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+              if (rol != null) 'rol': rol,
+            }),
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
@@ -59,7 +69,12 @@ class ApiService {
       throw Exception('Email o contraseña incorrectos');
     }
     if (r.statusCode != 200) throw Exception(_mensaje(r));
-    _guardarTokens(_json(r));
+    final datos = _json(r) as Map;
+    if (datos['requiere_rol'] == true) {
+      return List<String>.from(datos['roles'] as List);
+    }
+    _guardarTokens(Map<String, dynamic>.from(datos));
+    return null;
   }
 
   /// Revoca el refresh token en el servidor y borra la sesión local.

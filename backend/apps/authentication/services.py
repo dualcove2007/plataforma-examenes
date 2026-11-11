@@ -21,9 +21,10 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def emitir_tokens(usuario):
+def emitir_tokens(usuario, rol=None):
+    """`rol`: nombre del rol de la sesión (por defecto, el rol activo del usuario)."""
     refresh = JWTRefreshToken.for_user(usuario)
-    refresh["rol"] = usuario.rol.nombre
+    refresh["rol"] = rol or usuario.rol.nombre
     expira = datetime.fromtimestamp(refresh["exp"], tz=dt_timezone.utc)
     RefreshToken.objects.create(
         usuario=usuario,
@@ -35,7 +36,7 @@ def emitir_tokens(usuario):
 
 def renovar_tokens(refresh_str):
     try:
-        JWTRefreshToken(refresh_str)  # valida firma y expiración
+        token = JWTRefreshToken(refresh_str)  # valida firma y expiración
     except TokenError:
         raise AutenticacionFallida("Refresh token inválido o expirado.")
 
@@ -53,7 +54,11 @@ def renovar_tokens(refresh_str):
 
     registro.revocado = True  # rotación: cada refresh se usa una sola vez
     registro.save(update_fields=["revocado"])
-    return emitir_tokens(registro.usuario)
+    # La sesión conserva el rol elegido al iniciar; si ya no lo tiene, usa el principal.
+    usuario = registro.usuario
+    elegido = token.get("rol")
+    disponibles = {r.nombre for r in usuario.roles_disponibles()}
+    return emitir_tokens(usuario, elegido if elegido in disponibles else None)
 
 
 def revocar_token(refresh_str, usuario):

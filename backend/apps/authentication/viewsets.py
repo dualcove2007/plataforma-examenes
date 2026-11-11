@@ -22,7 +22,7 @@ from .views import respuesta_foto
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.select_related("rol").order_by("id")
+    queryset = Usuario.objects.select_related("rol").prefetch_related("roles").order_by("id")
     permission_classes = [IsAuthenticated, tiene_permiso("usuarios.gestionar")]
     filterset_class = UsuarioFilter
     search_fields = ["nombre", "email"]

@@ -30,7 +30,9 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
 
   List<Map<String, dynamic>>? _roles;
   String? _errorRoles;
-  int? _rolId;
+  int? _rolId; // rol principal de la cuenta
+  final Set<int> _rolesIds = {}; // todos los roles con los que puede entrar
+  Set<int> _rolesOriginales = {}; // al editar: los que ya tenía
   bool _activo = true;
   bool _verClave = false;
   bool _guardando = false;
@@ -51,6 +53,10 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
     super.initState();
     if (_editando) {
       _rolId = widget.usuario!['rol'] as int?;
+      _rolesIds.addAll(
+        ((widget.usuario!['roles'] as List?) ?? [_rolId]).whereType<int>(),
+      );
+      _rolesOriginales = {..._rolesIds};
       _activo = widget.usuario!['activo'] == true;
     }
     _cargarRoles();
@@ -72,17 +78,46 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
       setState(() {
         _roles = r;
         // Al registrar, el rol por defecto es Estudiante.
-        _rolId ??=
-            r.firstWhere(
-                  (x) => x['nombre'] == 'Estudiante',
-                  orElse: () => r.first,
-                )['id']
-                as int?;
+        if (_rolId == null) {
+          _rolId =
+              r.firstWhere(
+                    (x) => x['nombre'] == 'Estudiante',
+                    orElse: () => r.first,
+                  )['id']
+                  as int?;
+          _rolesIds.add(_rolId!);
+        }
       });
     } catch (e) {
       if (mounted) setState(() => _errorRoles = mensajeError(e));
     }
   }
+
+  /// El servidor devuelve los roles que guardó. Si no coinciden con los
+  /// marcados, el backend que está corriendo no es la versión nueva.
+  void _verificarRoles(Map<String, dynamic> respuesta) {
+    final guardados = ((respuesta['roles'] as List?) ?? const [])
+        .whereType<int>()
+        .toSet();
+    if (guardados.length != _rolesIds.length ||
+        !guardados.containsAll(_rolesIds)) {
+      throw Exception(
+        'El servidor no guardó los roles marcados. Reinicia el backend con '
+        'el código nuevo y vuelve a guardar.',
+      );
+    }
+  }
+
+  /// Marca o desmarca un rol. El principal siempre es uno de los marcados.
+  void _alternarRol(int id) => setState(() {
+    if (_rolesIds.contains(id)) {
+      if (_rolesIds.length == 1) return; // siempre debe quedar uno
+      _rolesIds.remove(id);
+      if (_rolId == id) _rolId = _rolesIds.first;
+    } else {
+      _rolesIds.add(id);
+    }
+  });
 
   Future<void> _elegirFoto() async {
     final accion = await menuFoto(context, tieneFoto: _tieneFoto);
@@ -123,8 +158,8 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
 
   Future<void> _guardar() async {
     if (!_form.currentState!.validate()) return;
-    if (_rolId == null) {
-      mostrarAviso(context, 'Elige un rol', error: true);
+    if (_rolId == null || _rolesIds.isEmpty) {
+      mostrarAviso(context, 'Elige al menos un rol', error: true);
       return;
     }
     FocusScope.of(context).unfocus();
@@ -136,13 +171,15 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
       'nombre': nombre.text.trim(),
       'email': email.text.trim().toLowerCase(),
       'rol': _rolId,
+      'roles': _rolesIds.toList(),
       'activo': _activo,
       if (clave.text.isNotEmpty) 'password': clave.text,
     };
     try {
       if (_editando) {
         final id = widget.usuario!['id'] as int;
-        await widget.api.actualizarUsuario(id, datos);
+        final guardado = await widget.api.actualizarUsuario(id, datos);
+        _verificarRoles(guardado);
         if (!mounted) return;
         final avisoFoto = await _guardarFoto(id);
         if (!mounted) return;
@@ -150,6 +187,7 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
         Navigator.pop(context, true);
       } else {
         final nuevo = await widget.api.crearUsuario(datos);
+        _verificarRoles(nuevo);
         if (!mounted) return;
         final avisoFoto = await _guardarFoto(nuevo['id'] as int);
         if (!mounted) return;
@@ -451,7 +489,15 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
               },
             ),
             _ReglasClave(controller: clave, opcional: _editando),
-            _titulo('Rol', Icons.shield_rounded),
+            _titulo('Roles', Icons.shield_rounded),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Puedes marcar varios. Si tiene más de uno, al iniciar sesión '
+                'elegirá con cuál entrar.',
+                style: TextStyle(color: Paleta.tintaSuave, fontSize: 13),
+              ),
+            ),
             if (_roles == null && _errorRoles == null)
               const Padding(
                 padding: EdgeInsets.all(12),
@@ -460,30 +506,36 @@ class _UsuarioFormPageState extends State<UsuarioFormPage> {
             else if (_errorRoles != null)
               EstadoError(mensaje: _errorRoles!, onReintentar: _cargarRoles)
             else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final r in _roles!)
-                    ChoiceChip(
-                      avatar: Icon(
-                        EstiloRol.de('${r['nombre']}').icono,
-                        size: 18,
+              PanelCard(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  children: [
+                    for (final r in _roles!)
+                      CheckboxListTile(
+                        value: _rolesIds.contains(r['id']),
+                        // Sobre sí mismo solo puede agregar roles, no quitarlos.
+                        onChanged: _esYo && _rolesOriginales.contains(r['id'])
+                            ? null
+                            : (_) => _alternarRol(r['id'] as int),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                        secondary: IconBadge(
+                          EstiloRol.de('${r['nombre']}').icono,
+                          fondo: EstiloRol.de('${r['nombre']}').suave,
+                          tam: 40,
+                        ),
+                        title: Text(
+                          '${r['nombre']}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
-                      label: Text('${r['nombre']}'),
-                      selected: _rolId == r['id'],
-                      selectedColor: EstiloRol.de('${r['nombre']}').suave,
-                      onSelected: _esYo
-                          ? null
-                          : (_) => setState(() => _rolId = r['id'] as int),
-                    ),
-                ],
+                  ],
+                ),
               ),
             if (_esYo)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text(
-                  'No puedes cambiar tu propio rol.',
+                  'No puedes quitarte roles a ti mismo.',
                   style: TextStyle(color: Paleta.tintaSuave, fontSize: 13),
                 ),
               ),

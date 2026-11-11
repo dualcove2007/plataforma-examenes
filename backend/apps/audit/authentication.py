@@ -10,7 +10,17 @@ class AuditJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
         resultado = super().authenticate(request)
         if resultado is not None:
-            context.asignar_usuario(resultado[0])
+            usuario, token = resultado
+            # Con varios roles, la sesión usa el rol elegido al iniciar (va en el token).
+            elegido = token.get("rol")
+            if elegido and elegido != usuario.rol.nombre:
+                rol = next(
+                    (r for r in usuario.roles_disponibles() if r.nombre == elegido),
+                    None,
+                )
+                if rol is not None:
+                    usuario.activar_rol(rol)
+            context.asignar_usuario(usuario)
         return resultado
     
     
