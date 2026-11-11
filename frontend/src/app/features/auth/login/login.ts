@@ -3,6 +3,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
+import { pideRol } from '../../../core/models/auth.models';
 import { mensajeError } from '../../../core/utils/api-error';
 
 @Component({
@@ -25,6 +26,8 @@ export class Login {
   readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
   readonly verPassword = signal(false);
+  /** Roles entre los que elegir cuando la cuenta tiene más de uno. */
+  readonly roles = signal<string[] | null>(null);
 
   alternarPassword(): void {
     this.verPassword.update((v) => !v);
@@ -35,7 +38,8 @@ export class Login {
     return control.invalid && control.touched;
   }
 
-  enviar(): void {
+  /** `rol`: solo al elegir con qué rol entrar (cuentas con varios roles). */
+  enviar(rol?: string): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -43,13 +47,26 @@ export class Login {
     this.cargando.set(true);
     this.error.set(null);
 
-    this.auth.login(this.form.getRawValue()).subscribe({
-      next: () => void this.router.navigateByUrl(this.destino()),
+    this.auth.login({ ...this.form.getRawValue(), ...(rol ? { rol } : {}) }).subscribe({
+      next: (res) => {
+        if (pideRol(res)) {
+          this.roles.set(res.roles);
+          this.cargando.set(false);
+          return;
+        }
+        void this.router.navigateByUrl(this.destino());
+      },
       error: (err: unknown) => {
         this.error.set(mensajeError(err));
         this.cargando.set(false);
       },
     });
+  }
+
+  volver(): void {
+    this.roles.set(null);
+    this.form.controls.password.reset('');
+    this.error.set(null);
   }
 
   /** returnUrl solo se acepta si es una ruta interna (evita redirecciones externas). */

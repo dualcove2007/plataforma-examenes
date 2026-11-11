@@ -14,7 +14,15 @@ import {
 } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse, NombreRol, Tokens, Usuario } from '../models/auth.models';
+import {
+  LoginRequest,
+  LoginResponse,
+  LoginRolPendiente,
+  NombreRol,
+  RolesPendientes,
+  Tokens,
+  Usuario,
+} from '../models/auth.models';
 
 const REFRESH_KEY = 'refresh_token';
 
@@ -36,14 +44,23 @@ export class AuthService {
   private refrescando$?: Observable<string>;
 
   // ------------------------------ sesión ------------------------------
-  login(credenciales: LoginRequest): Observable<Usuario> {
-    return this.http.post<LoginResponse>(`${this.api}/auth/login/`, credenciales).pipe(
-      tap((res) => {
-        this.guardarTokens(res);
-        this.usuario.set(res.usuario);
-      }),
-      map((res) => res.usuario),
-    );
+  /**
+   * Devuelve el usuario si ya entró, o `{ requiereRol, roles }` si la cuenta tiene
+   * varios roles: hay que volver a llamar con el `rol` elegido.
+   */
+  login(credenciales: LoginRequest): Observable<Usuario | RolesPendientes> {
+    return this.http
+      .post<LoginResponse | LoginRolPendiente>(`${this.api}/auth/login/`, credenciales)
+      .pipe(
+        map((res): Usuario | RolesPendientes => {
+          if ('requiere_rol' in res) {
+            return { requiereRol: true, roles: res.roles };
+          }
+          this.guardarTokens(res);
+          this.usuario.set(res.usuario);
+          return res.usuario;
+        }),
+      );
   }
 
   logout(): void {

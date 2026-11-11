@@ -43,7 +43,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('guarda el access en memoria, el refresh en localStorage y el usuario', () => {
-      let resultado: Usuario | undefined;
+      let resultado: unknown;
       auth.login({ email: 'docente@demo.com', password: 'x' }).subscribe((u) => (resultado = u));
 
       const req = http.expectOne(`${API}/auth/login/`);
@@ -55,6 +55,19 @@ describe('AuthService', () => {
       expect(auth.refreshToken()).toBe('R1');
       expect(auth.usuario()).toEqual(docente);
       expect(auth.autenticado()).toBe(true);
+    });
+
+    it('si la cuenta tiene varios roles pide elegir uno y no deja sesión', () => {
+      let resultado: unknown;
+      auth.login({ email: 'doble@demo.com', password: 'x' }).subscribe((r) => (resultado = r));
+
+      http
+        .expectOne(`${API}/auth/login/`)
+        .flush({ requiere_rol: true, roles: ['Docente', 'Estudiante'] });
+
+      expect(resultado).toEqual({ requiereRol: true, roles: ['Docente', 'Estudiante'] });
+      expect(auth.autenticado()).toBe(false);
+      expect(auth.refreshToken()).toBeNull();
     });
 
     it('no deja sesión si las credenciales son incorrectas', () => {

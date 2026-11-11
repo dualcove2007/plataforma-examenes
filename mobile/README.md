@@ -95,3 +95,16 @@ lib/
     notificaciones_page.dart   compartida por todos los roles
   utils/       reglas de contraseña (clave.dart)
 ```
+
+## Generar el APK para celulares
+
+```bash
+cd mobile
+flutter build apk --release --dart-define=API_URL=http://<IP-DE-TU-PC>:8000/api
+```
+
+El archivo queda en `mobile/build/app/outputs/flutter-apk/app-release.apk`. El celular
+debe poder llegar al backend: misma red wifi que el PC (con el puerto 8000 abierto en el
+firewall y la IP en `ALLOWED_HOSTS` de `docker-compose.yml`) o un backend publicado en
+internet. El APK se firma con la llave de depuración; para Play Store hace falta una
+llave propia.

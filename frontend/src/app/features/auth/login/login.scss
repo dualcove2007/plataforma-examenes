@@ -221,3 +221,35 @@ button[type='submit'] {
     outline: 2px solid var(--cian);
   }
 }
+
+.elegir {
+  margin: 0;
+  text-align: center;
+  color: var(--color-texto-suave);
+}
+
+.rol {
+  padding: 0.8rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: rgb(139 148 255 / 0.12);
+  border: 1px solid rgb(139 148 255 / 0.4);
+  border-radius: 0.8rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgb(139 148 255 / 0.25);
+  }
+}
+
+.volver {
+  align-self: center;
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  color: var(--color-texto-suave);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
